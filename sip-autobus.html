@@ -280,7 +280,8 @@ textarea#infoTxt{margin-top:6px}
       <button id="full">Pełny ekran</button>
       <button id="openSide" title="Otwiera tablicę boczną w nowej karcie; pokazuje tę samą linię, cel i ulice trasy">Tablica boczna ↗</button>
     </div>
-    <label class="chk" style="margin-top:8px"><input type="checkbox" id="infoOn"> Okienko „Informacje” na ekranie</label>
+    <label class="chk" style="margin-top:8px"><input type="checkbox" id="hdrName"> Nagłówek: sama nazwa przystanku (bez „PRZYSTANEK:”)</label>
+    <label class="chk" style="margin-top:4px"><input type="checkbox" id="infoOn"> Okienko „Informacje” na ekranie</label>
     <textarea id="infoTxt" maxlength="400" rows="2" placeholder="Treść komunikatu, np. Przystanek Dworzec Centralny nieczynny"></textarea>
     <div class="hint">Podgląd na górze jest skalowany. Pełny ekran daje dokładnie 1920×540 na ekranie tej wielkości.</div>
   </section>
@@ -681,6 +682,7 @@ function drawHdr(v){
   h.style.transform = "none";
   h.innerHTML = '<span class="lab"></span><span class="nm"></span>' + (tr.length ? arrowSvg(nz, LC) + transHtml(tr) : "");
   h.children[0].textContent = hdrLabel(v, nz);
+  if ($("hdrName") && $("hdrName").checked) h.children[0].style.display = "none";   // opcja: sama nazwa przystanku
   h.children[0].style.color = v.atStop ? LC : "";                    // na przystanku etykieta w kolorze linii, przy „następny przystanek” szara
   var nm = h.children[1]; nm.textContent = s.name; nm.style.color = LC;
   if (gz) { var hzb = document.createElement("span"); hzb.className = "hz"; hzb.textContent = "granica strefy biletowej"; nm.appendChild(hzb); }   // wewnątrz nazwy, więc przy przewijaniu jedzie razem z nią
@@ -1204,6 +1206,11 @@ function fitStage(){
   $("startLive").addEventListener("click", startLive);
   $("stopLive").addEventListener("click", function(){ stopLive(); setStatus("st3", "Zatrzymano odświeżanie."); });
   $("voice").addEventListener("change", voiceToggle);
+  try { var hq = new URLSearchParams(location.search).get("label"); $("hdrName").checked = hq === "0" || (hq !== "1" && localStorage.getItem("sip_hdrname") === "1"); } catch(e){}
+  $("hdrName").addEventListener("change", function(){
+    try { localStorage.setItem("sip_hdrname", $("hdrName").checked ? "1" : "0"); } catch(e){}
+    var v = S.view; if (v && v.mode === "run" && v.stops.length) drawHdr(v);
+  });
   try { if (localStorage.getItem("sip_auto") === "0") $("auto").checked = false; } catch(e){}
   $("auto").addEventListener("change", function(){ try { localStorage.setItem("sip_auto", $("auto").checked ? "1" : "0"); } catch(e){} });
   try { var vq = new URLSearchParams(location.search).get("voicename"); $("voiceName").checked = vq === "1" || (vq !== "0" && localStorage.getItem("sip_voicename") === "1"); } catch(e){}
