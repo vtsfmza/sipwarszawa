@@ -291,7 +291,8 @@ var TYPES = {
   strefowa_okresowa:{ label:"Strefowa okresowa", bg:IMG.strefowa_okresowa, num:"#1f8f1f", dot:"#88007c" },
   okresowa:{ label:"Okresowa", bg:IMG.okresowa, num:"#262626", dot:"#88007c" },
   okresowa_przyspieszona:{ label:"Okresowa przyspieszona", bg:IMG.okresowa_przyspieszona, num:"#d3232f", dot:"#88007c" },
-  specjalna:{ label:"Specjalna", bg:IMG.specjalna, num:"#88007c", dot:"#88007c" }
+  specjalna:{ label:"Specjalna", bg:IMG.specjalna, num:"#000000", dot:"#88007c" },
+  dwucyfrowa:{ label:"Dwucyfrowa (czerwona)", bg:"img/zwykla_czerwona.png", num:"#262626", dot:"#d3232f" }
 };
 // Ustalenie typu po numerze to przybliżenie; zawsze można wskazać typ ręcznie.
 function detectType(line){
@@ -300,6 +301,7 @@ function detectType(line){
   if (/^5\d\d$/.test(L)) return "przyspieszona";
   if (/^[789]\d\d$/.test(L)) return "strefowa";
   if (/^[A-Z]/.test(L)) return "specjalna";
+  if (/^\d{1,2}$/.test(L)) return "dwucyfrowa";                   // linie 1-2-cyfrowe (np. 10, 20): czerwone zamiast fioletowych
   return "zwykla";
 }
 
@@ -683,6 +685,9 @@ function voicePlay(){
   else voiceStatus("Odtwarzanie: " + decodeURIComponent(u.replace(/^.*gtfscc\.github\.io\//, "")));
 }
 function voiceStatus(msg, err){ var el = $("voiceSt"); if (el) { el.textContent = msg; el.className = "status" + (err ? " err" : ""); } if (err) console.warn(msg); }
+// Główne przystanki, na których gra „Możliwa kontrola biletów”. ZTM zapowiada to tylko na „wybranych przystankach” i nie publikuje ich listy,
+// więc to nasz wybór węzłów: dopisz lub usuń nazwy w wyrażeniu (dopasowanie od początku nazwy przystanku).
+var KB_MAIN = /^(centrum(\s*\d+)?$|dw(\.|orzec)\s*(centralny|wschodni|zachodni|gdański)(\s|$|-)|rondo\s+(onz|daszyńskiego|radosława)|plac\s+(zawiszy|wilsona)|świętokrzyska|politechnika)(\s|$|-)/i;
 function announce(v){
   if (!VOICE.cat || v.mode !== "run" || !v.stops.length) return;
   var s = v.stops[v.idx], last = v.idx === v.stops.length - 1, nz = s.typ === "2", q = [], miss = [];
@@ -702,6 +707,7 @@ function announce(v){
     add(vSnd("Następny Przystanek (WTP)")); name(s);
     if (nz) add(vSnd("Przystanek na Żądanie (WTP)"));
   }
+  if (!last && KB_MAIN.test(String(s.full || s.name))) add(vSnd("Możliwa Kontrola Biletów (WTP)"));   // tylko na głównych przystankach (lista KB_MAIN)
   if (miss.length) console.warn("Brak nagrania nazwy przystanku:", miss.join(", "));
   VOICE.queue = q;
   if (!q.length) { voiceStatus("Brak nagrań dla tego przystanku w banku zapowiedzi.", true); return; }
