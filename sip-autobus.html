@@ -471,9 +471,17 @@ function startSim(stops, line){
 var geoTimer = null, geoTries = 0;
 // poza Warszawą nazwy w GTFS mają przedrostek miejscowości ("Ząbki Maczka"); na wyświetlaczu jest samo "Maczka"
 function shortName(name, place){
-  if (!place || /^warszawa$/i.test(place)) return name;
-  var pl = String(place).toLowerCase(), n = String(name);
-  if (n.toLowerCase().indexOf(pl + " ") === 0 && n.length > place.length + 1) return n.slice(place.length + 1).trim();
+  if (!place) return name;
+  var cands = String(place).split("|").filter(Boolean), n = String(name);
+  if (cands.some(function(c){ return /^warszawa$/i.test(c); })) return name;
+  var opts = [];                                                       // np. "Konstancin-Jeziorna", a w GTFS też "Konstancin" lub "Jeziorna"
+  cands.forEach(function(c){ opts.push(c); if (c.indexOf("-") > 0) c.split("-").forEach(function(x){ opts.push(x); }); });
+  opts.sort(function(a, b){ return b.length - a.length; });
+  var low = n.toLowerCase().replace(/-/g, " ");
+  for (var i = 0; i < opts.length; i++) {
+    var o = opts[i].toLowerCase().replace(/-/g, " ");
+    if (o.length > 1 && low.indexOf(o + " ") === 0 && n.length > o.length + 1) return n.slice(o.length + 1).trim();
+  }
   return n;
 }
 function fetchGeo(stops){

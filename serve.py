@@ -206,7 +206,7 @@ def _geo_worker():
                 a = json.loads(r.read().decode("utf-8")).get("address", {})
             street = next((a[k] for k in STREET_KEYS if a.get(k)), "")
             district = next((a[k] for k in DISTRICT_KEYS if a.get(k)), "")
-            place = next((a[k] for k in ("city", "town", "village", "municipality") if a.get(k)), "")
+            place = "|".join(dict.fromkeys(a[k] for k in ("city", "town", "village", "hamlet", "municipality") if a.get(k)))
         except Exception as e:
             ok = False
             print("Nominatim: %s (przystanek %s) - sprobuje ponownie pozniej" % (e, sid), flush=True)
