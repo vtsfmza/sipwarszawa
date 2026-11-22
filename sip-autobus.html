@@ -476,7 +476,7 @@ function transfersAt(s, line){
   var L = String(line).toUpperCase(), g = { metro:[], tram:[], bus:[] };
   Object.keys(set).filter(function(x){ return x.toUpperCase() !== L; })
     .sort(function(a, b){ return a.localeCompare(b, "pl", { numeric:true }); })
-    .forEach(function(l){ var t = (S.ltype && S.ltype[l]) || "bus"; (g[t] || g.bus).push(l); });
+    .forEach(function(l){ var t = /^\d{1,2}$/.test(l) ? "tram" : /^M\d/i.test(l) ? "metro" : ((S.ltype && S.ltype[l]) || "bus"); (g[t] || g.bus).push(l); });
   var left = 10, out = [];
   ["metro", "tram", "bus"].forEach(function(t){
     var ls = g[t].slice(0, Math.max(0, left)); left -= ls.length;

@@ -253,6 +253,11 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.end_headers()
 
+    def end_headers(self):
+        # bez cache po stronie przeglądarki: po aktualizacji pliku zawsze widać nową wersję
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def log_message(self, fmt, *args):  # bez klucza API w logach
         print("%s %s" % (self.address_string(), (fmt % args).split("?")[0]))
 
