@@ -146,6 +146,10 @@ _geo_ids = set()
 def _db():
     c = sqlite3.connect(GEO_DB, timeout=30)
     c.execute("CREATE TABLE IF NOT EXISTS geo (id TEXT PRIMARY KEY, street TEXT, district TEXT)")
+    try:
+        c.execute("ALTER TABLE geo ADD COLUMN place TEXT")       # miejscowość (do skracania nazw typu "Ząbki Maczka")
+    except sqlite3.OperationalError:
+        pass
     return c
 
 def _stop_coords():
@@ -162,9 +166,9 @@ def geo_lookup(ids):
     try:
         coords = None
         for sid in ids:
-            row = db.execute("SELECT street, district FROM geo WHERE id=?", (sid,)).fetchone()
-            if row:
-                out[sid] = {"street": row[0] or "", "district": row[1] or ""}
+            row = db.execute("SELECT street, district, place FROM geo WHERE id=?", (sid,)).fetchone()
+            if row and row[2] is not None:
+                out[sid] = {"street": row[0] or "", "district": row[1] or "", "place": row[2] or ""}
                 continue
             pending += 1
             wanted.append(sid)
@@ -193,7 +197,7 @@ def _geo_worker():
         if not item:
             time.sleep(1); continue
         sid, lat, lon = item
-        street = district = ""
+        street = district = place = ""
         ok = True
         try:
             q = urllib.parse.urlencode({"format": "jsonv2", "lat": lat, "lon": lon, "zoom": 18, "addressdetails": 1, "accept-language": "pl"})
@@ -202,13 +206,14 @@ def _geo_worker():
                 a = json.loads(r.read().decode("utf-8")).get("address", {})
             street = next((a[k] for k in STREET_KEYS if a.get(k)), "")
             district = next((a[k] for k in DISTRICT_KEYS if a.get(k)), "")
+            place = next((a[k] for k in ("city", "town", "village", "municipality") if a.get(k)), "")
         except Exception as e:
             ok = False
             print("Nominatim: %s (przystanek %s) - sprobuje ponownie pozniej" % (e, sid), flush=True)
         if ok:
             db = _db()
             try:
-                db.execute("INSERT OR REPLACE INTO geo VALUES (?,?,?)", (sid, street, district)); db.commit()
+                db.execute("INSERT OR REPLACE INTO geo (id, street, district, place) VALUES (?,?,?,?)", (sid, street, district, place)); db.commit()
             finally:
                 db.close()
         with _geo_lock:

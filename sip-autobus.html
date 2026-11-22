@@ -469,6 +469,13 @@ function startSim(stops, line){
 }
 // ulice i dzielnice: serwer (serve.py) pyta OpenStreetMap w tle i zapamiętuje wyniki; tu dopytujemy do skutku
 var geoTimer = null, geoTries = 0;
+// poza Warszawą nazwy w GTFS mają przedrostek miejscowości ("Ząbki Maczka"); na wyświetlaczu jest samo "Maczka"
+function shortName(name, place){
+  if (!place || /^warszawa$/i.test(place)) return name;
+  var pl = String(place).toLowerCase(), n = String(name);
+  if (n.toLowerCase().indexOf(pl + " ") === 0 && n.length > place.length + 1) return n.slice(place.length + 1).trim();
+  return n;
+}
 function fetchGeo(stops){
   clearTimeout(geoTimer);
   if (!S.routes || !/^https?:$/.test(location.protocol)) return;
@@ -477,7 +484,11 @@ function fetchGeo(stops){
   fetch("api/geo?ids=" + encodeURIComponent(ids.join(","))).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
     if (!j || S.view.stops !== stops) return;
     var changed = false;
-    stops.forEach(function(s){ var g = j.geo && j.geo[s.id]; if (g && (s.street !== (g.street || "") || s.dz !== (g.district || ""))) { s.street = g.street || ""; s.dz = g.district || ""; changed = true; } });
+    stops.forEach(function(s){
+      var g = j.geo && j.geo[s.id]; if (!g) return;
+      var nn = shortName(s.full || s.name, g.place);
+      if (s.street !== (g.street || "") || s.dz !== (g.district || "") || s.name !== nn) { s.street = g.street || ""; s.dz = g.district || ""; s.full = s.full || s.name; s.name = nn; changed = true; }
+    });
     if (changed) render();
     if (j.pending > 0 && ++geoTries < 1000) geoTimer = setTimeout(function(){ fetchGeo(stops); }, 1500);
     setStatus("st2", j.pending > 0 ? "Ulice i dzielnice: jeszcze " + j.pending + " przystanków do sprawdzenia…" : "Ulice i dzielnice wczytane.", j.pending > 0 ? "" : "ok");
@@ -593,7 +604,7 @@ function announce(v){
   if (!VOICE.cat || v.mode !== "run" || !v.stops.length) return;
   var s = v.stops[v.idx], last = v.idx === v.stops.length - 1, nz = s.typ === "2", q = [], miss = [];
   function add(u){ if (u) q.push(u); }
-  function name(st){ var u = vStop(st.name); if (u) q.push(u); else miss.push(st.name); }
+  function name(st){ var u = vStop(st.full || st.name); if (u) q.push(u); else miss.push(st.name); }
   if (v.atStop) {
     if (VOICE.gong) add(vSnd("Gong BUSE - Przystanek"));
     if (v.idx === 0) {
@@ -665,7 +676,10 @@ function drawDiag(v, T){
   box("ln", xOf(doneK), Y - LW / 2, xOf(n - 1) - xOf(doneK), LW, "background:" + T.dot);
 
   // ulice (wygładzone: pojedynczy przystanek na innej ulicy nie tworzy odcinka)
-  var st = v.stops.map(function(s){ return s.street || ""; });
+  var BAD = /^(pętla|petla|parking|zajezdnia|dojazd|plac manewrowy|stacja|przystanek|dworzec autobusowy)|autobusow/i;
+  var st = v.stops.map(function(s){ return BAD.test(s.street || "") ? "" : (s.street || ""); });
+  for (var b1 = 1; b1 < n; b1++) if (!st[b1]) st[b1] = st[b1 - 1];                 // nie-ulice (pętle, parkingi) nie tworzą odcinków
+  for (var b2 = n - 2; b2 >= 0; b2--) if (!st[b2]) st[b2] = st[b2 + 1];
   for (var q = 1; q < n - 1; q++) if (st[q] !== st[q - 1] && st[q - 1] === st[q + 1]) st[q] = st[q - 1];
   var segs = [], a0 = 0;
   for (var q2 = 1; q2 <= n; q2++) if (q2 === n || st[q2] !== st[a0]) { segs.push({ a:a0, b:q2 - 1, name:st[a0] }); a0 = q2; }
