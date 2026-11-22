@@ -510,7 +510,11 @@ function shortName(name, place){
   var low = n.toLowerCase().replace(/-/g, " ");
   for (var i = 0; i < opts.length; i++) {
     var o = opts[i].toLowerCase().replace(/-/g, " ");
-    if (o.length > 1 && low.indexOf(o + " ") === 0 && n.charAt(o.length) === " " && n.length > o.length + 1) return n.slice(o.length + 1).trim();   // łącznik zostaje: "Sowia Wola-Szkoła" to pełna nazwa
+    if (o.length > 1 && low.indexOf(o + " ") === 0 && n.charAt(o.length) === " " && n.length > o.length + 1) {
+      var rest = n.slice(o.length + 1).trim();
+      if (/^[^A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż0-9]/.test(rest)) continue;       // reszta zaczyna się od "-" itp.: miejscowość jest częścią nazwy ("Długa - OSP"), nie przedrostkiem
+      return rest;
+    }   // łącznik zostaje: "Sowia Wola-Szkoła" to pełna nazwa
   }
   return n;
 }
@@ -683,6 +687,18 @@ function vStop(name){
   for (var j = 0; j < tries.length; j++) { var v = VOICE.idx[nk(tries[j])]; if (v) return vUrl(v); }
   return null;
 }
+function vLine(line){                                                // numer linii; gdy w banku brak nagrania (np. 755), składamy tylko z poprawnych części: "750" + "5"
+  var L = String(line).toUpperCase(), u = vSnd(L), m = /^(\d)(\d)(\d)$/.exec(L);
+  if (u) return [u];
+  if (!m) return [];
+  var opts = [[m[1] + m[2] + "0", m[3]], [m[1] + "00", m[2] + m[3]], [m[1] + "00", m[2] + "0", m[3]]];   // setki+dziesiątki | jedności; setki | reszta; setki | dziesiątki | jedności
+  for (var i = 0; i < opts.length; i++) {
+    var parts = opts[i].map(function(x){ return String(parseInt(x, 10)); }).filter(function(x){ return x !== "0"; });
+    var urls = parts.map(vSnd);
+    if (parts.length > 1 && urls.every(Boolean)) return urls;
+  }
+  return [];
+}
 function voiceAliases(){ return fetch("zapowiedzi_aliasy.json").then(function(r){ return r.ok ? r.json() : {}; }).catch(function(){ return {}; }).then(function(a){ VOICE.alias = {}; Object.keys(a || {}).forEach(function(k){ VOICE.alias[nk(k)] = a[k]; }); }); }
 function voicePlay(){
   if (!VOICE.audio) {
@@ -711,7 +727,8 @@ function announce(v){
   if (v.atStop) {
     if (VOICE.gong) add(vSnd("Gong BUSE - Przystanek"));
     if (v.idx === 0) {
-      add(vSnd("Linia (WTP)")); add(vSnd(String(v.line).toUpperCase()));
+      var lc = vLine(v.line);
+      if (lc.length) { add(vSnd("Linia (WTP)")); lc.forEach(add); } else miss.push("linia " + v.line);   // bez nagrania numeru nie mówimy samego „Linia”
       add(vSnd("Kierunek (WTP)")); name(v.stops[v.stops.length - 1]);
     }
     add(vSnd("Przystanek (WTP)")); name(s);                           // "Przystanek: <nazwa>", a na żądanie dopiero po nazwie
