@@ -52,7 +52,7 @@ def build_routes(zip_path):
         stops = {}
         for s in _rows(zf, "stops.txt"):
             try:
-                stops[s["stop_id"]] = [s.get("stop_name", ""), round(float(s["stop_lat"]), 6), round(float(s["stop_lon"]), 6), s.get("wheelchair_boarding", "")]
+                stops[s["stop_id"]] = [s.get("stop_name", ""), round(float(s["stop_lat"]), 6), round(float(s["stop_lon"]), 6), s.get("wheelchair_boarding", ""), (s.get("zone_id") or "").strip()]
             except (ValueError, KeyError):
                 pass
         seqs = {}                         # (linia, kierunek) -> {(sekwencja): [licznik, headsign]}
@@ -93,7 +93,7 @@ def build_routes(zip_path):
             used.update(x[0] for x in sig)
     for l in routes:
         routes[l].sort(key=lambda v: v["code"])
-    return {"built": int(time.time()), "ver": 2, "types": ltype, "stops": {k: v for k, v in stops.items() if k in used}, "routes": routes}
+    return {"built": int(time.time()), "ver": 3, "types": ltype, "stops": {k: v for k, v in stops.items() if k in used}, "routes": routes}
 
 def get_routes_json():
     with _lock:
@@ -101,7 +101,7 @@ def get_routes_json():
             if time.time() - os.path.getmtime(CACHE) < CACHE_TTL:
                 with open(CACHE, "rb") as f:
                     data = f.read()
-                if b'"ver":2' in data[:200]:        # starszy cache bez typów linii: zbuduj od nowa
+                if b'"ver":3' in data[:200]:        # starszy cache bez typów linii i stref: zbuduj od nowa
                     return data
         except OSError:
             pass

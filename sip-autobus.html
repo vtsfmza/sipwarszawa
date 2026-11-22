@@ -42,7 +42,7 @@ h1{margin:0;font-size:20px;font-weight:700}
 #num span{display:inline-block;transform-origin:center}
 #dest{left:380px;top:12px;height:58px;line-height:58px;font-size:54px;font-weight:600}
 #name{left:700px;top:190px;height:77px;line-height:77px;font-size:62px;font-weight:600}
-#clock{position:absolute;left:15px;top:500px;width:222px;height:32px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+#clock{position:absolute;left:15px;top:500px;width:222px;height:32px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:400;font-variant-numeric:tabular-nums;letter-spacing:.02em}
 #list{position:absolute;left:640px;top:290px;width:1250px}
 #list::before{content:"";position:absolute;left:28px;top:26px;bottom:26px;width:4px;background:#b9b9b9}
 .row{position:relative;height:52px;display:flex;align-items:center}
@@ -93,7 +93,7 @@ h1{margin:0;font-size:20px;font-weight:700}
 #info .ih{background:#e6b41c;height:30px;line-height:30px;padding-left:7px;font-weight:700;font-size:21px}
 #info .ib{padding:12px 10px;text-align:center;line-height:1.25;white-space:pre-wrap;overflow-wrap:anywhere;overflow:hidden;height:202px}
 textarea#infoTxt{width:100%;min-height:54px;padding:5px 7px;border:1px solid var(--line);border-radius:5px;background:var(--field);color:var(--fg);font:inherit;resize:vertical}
-#clock{font-size:18px!important;white-space:nowrap;letter-spacing:-.2px}
+#clock{font-size:19.5px!important;font-weight:400!important;white-space:nowrap;letter-spacing:0}
 body.kiosk{background:#000}
 body.kiosk header,body.kiosk .panel{display:none!important}
 body.kiosk .page{padding:0;max-width:none;gap:0}
@@ -143,6 +143,21 @@ button{padding:4px 10px}
 .status:empty{display:none}
 .radio{gap:10px}
 .radio label{font-size:13px}
+
+/* strefy biletowe, zwinięte odcinki trasy, długa nazwa w nagłówku, legenda */
+#diag .zn{position:absolute;box-sizing:border-box;border:1px solid #8f8f8f;text-align:center;font-weight:700;color:#2b2b2b;white-space:nowrap;overflow:hidden}
+#diag .zn.z2{background:#cdcdcd}
+#diag .zn.z1{background:#f3f3f3}
+#diag .cb{border-radius:999px}
+#diag .cb svg{display:block}
+#diag .gw{position:absolute;transform-origin:0 100%;white-space:nowrap}
+#diag .gw .gz{position:absolute;top:0;background:#d3232f;color:#fff;font-weight:700;border-radius:2px;padding:0 4px;white-space:nowrap;transform-origin:0 50%}
+#hdr .hz{align-self:center;margin-left:16px;background:#d3232f;color:#fff;font-size:20px;font-weight:700;line-height:1;padding:5px 10px;border-radius:3px}
+#hdr .nmw{position:relative;display:inline-block;overflow:hidden;height:62px;align-self:center}
+#hdr .nmp{position:absolute;left:0;top:0;white-space:nowrap;font-size:46px;font-weight:700;line-height:62px}
+#foot{right:15px;bottom:9px;gap:16px;font-size:13.5px;font-weight:700;color:#222}
+#foot .lg{display:flex;align-items:center;gap:6px}
+#foot img{position:static;display:block;width:24px;height:24px}
 </style>
 </head>
 <body>
@@ -161,7 +176,7 @@ button{padding:4px 10px}
       <div id="num"><span></span></div>
       <div id="list"></div>
       <div id="diag"></div>
-      <div id="foot"><svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="3" fill="#2745c9"/><path d="M24 9v12a3 3 0 0 1-3 3H9z" fill="#d3232f"/><circle cx="11" cy="5.5" r="2.2" fill="#fff"/><path d="M10.5 8.5v6h5l2 4.5M10.5 11.5h4.5M9 12.5a4.6 4.6 0 1 0 6 6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>przystanek o utrudnionym dostępie dla osób niepełnosprawnych</span></div>
+      <div id="foot"><span class="lg"><img src="img/wheelchair_partial.png" alt=""><span>przystanek o utrudnionym dostępie dla osób niepełnosprawnych</span></span><span class="lg"><img src="img/wheelchair_none.png" alt=""><span>przystanek niedostępny dla osób niepełnosprawnych</span></span></div>
       <div id="hdr"></div>
       <div id="info" hidden><div class="ih">INFORMACJE</div><div class="ib" id="infoBody"></div></div>
       <div id="clock"></div>
@@ -199,6 +214,7 @@ button{padding:4px 10px}
       </label>
     </div>
     <div class="status" id="st2" role="status" aria-live="polite"></div>
+    <div class="status" id="stZone" role="status" aria-live="polite"></div>
   </section>
 
   <section class="panel" aria-labelledby="h-mode">
@@ -365,7 +381,7 @@ function nameKey(n){ return cleanName(n).toLowerCase(); }
 function buildStops(arr){
   return arr.map(function(o){
     var id = o.id, c = S.coords.get(id), nm = cleanName(S.names[id] || ("Przystanek " + id));
-    return { id:id, z:nameKey(nm), typ:String(o.typ), wc:o.wc || "", min:o.min == null ? null : o.min, street:"", dz:"", name:nm,
+    return { id:id, z:nameKey(nm), typ:String(o.typ), wc:o.wc || "", zn:o.zn || "", min:o.min == null ? null : o.min, street:"", dz:"", name:nm,
              lat: c ? c[0] : null, lon: c ? c[1] : null };
   });
 }
@@ -393,17 +409,18 @@ function loadStatic(){
     return r.json();
   }).then(function(d){
     if (!d || !d.routes) throw new Error("Nieoczekiwana odpowiedź z /gtfs/routes.json.");
-    var routes = {}, names = {}, zl = {}, coords = new Map(), wcs = {};
+    var routes = {}, names = {}, zl = {}, coords = new Map(), wcs = {}, zns = {};
     Object.keys(d.stops || {}).forEach(function(id){
       var st = d.stops[id]; names[id] = st[0]; coords.set(id, [st[1], st[2]]);
-      if (st[3] === "2") wcs[id] = "none"; else if (st[3] === "p") wcs[id] = "partial";
+      if (st[3] === "2" || st[3] === "p") wcs[id] = "partial";      // niebieska ikona „utrudniony dostęp”; czerwonej „niedostępny” nie rysujemy (brak takiego stanu w danych)
+      if (st[4]) zns[id] = st[4];
     });
     Object.keys(d.routes).forEach(function(l){
       d.routes[l].forEach(function(v){
         var o = [];
         v.stops.forEach(function(st, j){
           if (!names[st[0]]) return;
-          o.push({ id:st[0], typ:st[1], wc:wcs[st[0]] || "", min:v.min ? v.min[j] : null });
+          o.push({ id:st[0], typ:st[1], wc:wcs[st[0]] || "", zn:zns[st[0]] || "", min:v.min ? v.min[j] : null });
           var z = nameKey(names[st[0]]);
           (zl[z] = zl[z] || {})[l] = 1;
         });
@@ -481,7 +498,7 @@ function shortName(name, place){
   var low = n.toLowerCase().replace(/-/g, " ");
   for (var i = 0; i < opts.length; i++) {
     var o = opts[i].toLowerCase().replace(/-/g, " ");
-    if (o.length > 1 && low.indexOf(o + " ") === 0 && n.length > o.length + 1) return n.slice(o.length + 1).trim();
+    if (o.length > 1 && low.indexOf(o + " ") === 0 && n.charAt(o.length) === " " && n.length > o.length + 1) return n.slice(o.length + 1).trim();   // łącznik zostaje: "Sowia Wola-Szkoła" to pełna nazwa
   }
   return n;
 }
@@ -567,13 +584,87 @@ setInterval(function(){
   var v = S.view;
   if (v && v.mode === "run" && v.stops.length) drawHdr(v);
 }, 5000);
+// Strefy biletowe: null, gdy linia nie wyjeżdża poza strefę 1 (wtedy bez żadnych oznaczeń stref)
+function zoneOfStop(s){
+  var z = String(s.zn || ""), a = /1/.test(z), b = /2/.test(z);
+  return a && b ? "12" : b ? "2" : a ? "1" : "";
+}
+function zoneOf(stops){
+  if (stops._zi !== undefined) return stops._zi;
+  var n = stops.length, zs = stops.map(zoneOfStop), base = zs.map(function(z){ return z === "1" || z === "2" ? z : ""; }), mz = [], prev = "", nxt = "", j, first = "";
+  var res = null;
+  if (n > 1 && zs.some(function(z){ return z === "2"; })) {
+    for (j = 0; j < n; j++) { if (base[j]) { prev = base[j]; if (!first) first = base[j]; } mz[j] = base[j] || (zs[j] === "" ? prev : ""); }
+    for (j = n - 1; j >= 0; j--) { if (base[j]) nxt = base[j]; else if (zs[j] === "12") mz[j] = nxt; }   // przystanek graniczny (1+2) należy do następnej strefy
+    for (j = 0; j < n; j++) if (!mz[j]) mz[j] = j ? mz[j - 1] : first;
+    var bd = {};
+    for (j = 1; j < n; j++) if (mz[j] !== mz[j - 1]) bd[j] = true;
+    res = { zs:zs, mz:mz, bd:bd };
+  }
+  stops._zi = res;
+  return res;
+}
+function zoneStatus(stops){
+  var ZI = stops && stops.length ? zoneOf(stops) : null, el = $("stZone");
+  if (!el) return;
+  if (!ZI) { setStatus("stZone", ""); return; }
+  var names = Object.keys(ZI.bd).map(function(i){ return stops[i].full || stops[i].name; });
+  setStatus("stZone", "Linia wyjeżdża poza strefę 1." + (names.length ? " Granica strefy biletowej: " + names.join(", ") + "." : ""));
+}
+// Długa nazwa w nagłówku: rozmiar bez zmian, nazwa dzieli się na części, które po kolei wjeżdżają od góry w dół
+var HN = { key:"", k:0, t:0, tm:null };
+function hdrNameParts(nm, name, avail){
+  var words = String(name).split(" "), parts = [], line = "";
+  words.forEach(function(wd){
+    var test = line ? line + " " + wd : wd;
+    nm.textContent = test;
+    if (line && nm.offsetWidth > avail) { parts.push(line); line = wd; } else line = test;
+  });
+  if (line) parts.push(line);
+  return parts;
+}
+function hdrCycle(els, delay){
+  clearTimeout(HN.tm);
+  HN.tm = setTimeout(function(){
+    var a = els[HN.k], to = (HN.k + 1) % els.length, b = els[to];
+    b.style.transition = "none"; b.style.transform = "translateY(-100%)";
+    void b.offsetWidth;
+    a.style.transition = b.style.transition = "transform .55s ease";
+    a.style.transform = "translateY(100%)"; b.style.transform = "translateY(0)";
+    HN.k = to; HN.t = Date.now();
+    hdrCycle(els, 2600);
+  }, delay);
+}
+function hdrScroll(h, nm, parts, color){
+  var wMax = 0;
+  parts.forEach(function(p){ nm.textContent = p; wMax = Math.max(wMax, nm.offsetWidth); });
+  var box = document.createElement("span"); box.className = "nmw"; box.style.width = Math.ceil(wMax) + "px";
+  var els = parts.map(function(p, i){
+    var e = document.createElement("span"); e.className = "nmp"; e.textContent = p; e.style.color = color;
+    e.style.transform = "translateY(" + (i === HN.k ? 0 : -100) + "%)"; box.appendChild(e); return e;
+  });
+  h.replaceChild(box, nm);
+  hdrCycle(els, Math.max(150, 2600 - (Date.now() - HN.t)));
+}
 function drawHdr(v){
   var s = v.stops[v.idx], nz = s.typ === "2", h = $("hdr"), tr = transfersAt(s, v.line), LC = (TYPES[v.type] || TYPES.zwykla).dot;
+  var ZI = zoneOf(v.stops), gz = !!(ZI && ZI.bd[v.idx]);
+  clearTimeout(HN.tm);
   h.style.transform = "none";
-  h.innerHTML = '<span class="lab"></span><span class="nm"></span>' + (tr.length ? arrowSvg(nz, LC) + transHtml(tr) : "");
+  h.innerHTML = '<span class="lab"></span><span class="nm"></span>' + (gz ? '<span class="hz">granica strefy biletowej</span>' : "") + (tr.length ? arrowSvg(nz, LC) + transHtml(tr) : "");
   h.children[0].textContent = hdrLabel(v, nz);
   var nm = h.children[1]; nm.textContent = s.name; nm.style.color = LC;
-  var w = h.scrollWidth, sc = w > 1190 ? 1190 / w : 1;
+  var w = h.scrollWidth;
+  if (w > 1190) {
+    var avail = Math.max(260, 1190 - (w - nm.offsetWidth) - 4), parts = hdrNameParts(nm, s.name, avail);
+    if (parts.length > 1) {
+      var key = v.line + "|" + s.id + "|" + parts.join("¦");
+      if (HN.key !== key) { HN.key = key; HN.k = 0; HN.t = Date.now(); }
+      hdrScroll(h, nm, parts, LC);
+    } else { nm.textContent = s.name; HN.key = ""; }
+    w = h.scrollWidth;
+  } else HN.key = "";
+  var sc = w > 1190 ? 1190 / w : 1;
   h.style.transform = sc < 1 ? "scale(" + sc + ")" : "none";
   h.style.left = Math.max(380, 1123 - w * sc / 2) + "px";
 }
@@ -630,6 +721,7 @@ function announce(v){
     var all = transfersAt(s, v.line).map(function(g){ return g.lines; }).join(" ").split(" ");
     ["M1", "M2"].forEach(function(m){ if (all.indexOf(m) >= 0) add(vSnd("Możliwość przesiadki do pociągów linii metra " + m + " (Metro)")); });
   }
+  if (!last) add(vSnd("Możliwa Kontrola Biletów (WTP)"));            // po całej zapowiedzi (poza przystankiem końcowym)
   if (miss.length) console.warn("Brak nagrania nazwy przystanku:", miss.join(", "));
   VOICE.queue = q;
   if (!q.length) { voiceStatus("Brak nagrań dla tego przystanku w banku zapowiedzi.", true); return; }
@@ -655,11 +747,11 @@ function render(){
   ["num","diag","hdr","clock","foot"].forEach(function(id){ $(id).hidden = standby; });
   ["strip","name","dest","list"].forEach(function(id){ $(id).hidden = true; });
   applyInfo(standby);
-  if (standby) { $("bg").src = IMG.standby; sipPublish(null); return; }
+  if (standby) { $("bg").src = IMG.standby; zoneStatus(null); sipPublish(null); return; }
   $("bg").src = T.bg;
   var num = $("num"); num.style.color = T.num; $("diag").style.setProperty("--lc", T.dot);
   var ns = num.firstChild; ns.textContent = v.line; fit(ns, 190, 86); ns.style.transformOrigin = "center";
-  drawHdr(v); drawDiag(v, T); sipPublish(v); voiceCheck(v);
+  drawHdr(v); drawDiag(v, T); zoneStatus(v.stops); sipPublish(v); voiceCheck(v);
 }
 // Ulice trasy (wygładzone: pojedynczy przystanek na innej ulicy nie tworzy odcinka). Używa tego pasek ulic i tablica boczna.
 function streetSegs(stops){
@@ -695,16 +787,35 @@ function sipPublish(v){
 // pas na minuty, czerwony pasek z dzielnicami, pod nim ukośne kreski z ulicami
 function drawDiag(v, T){
   var el = $("diag"); el.innerHTML = "";
-  var n = v.stops.length, CX = 1049;
-  var W = Math.min(1330, 1025 + 6.7 * n), sp = n > 1 ? Math.min(200, W / (n - 1)) : 0;
-  W = sp * (n - 1);
-  var x0 = CX - W / 2;
+  var n = v.stops.length, CX = 1049, SPMIN = 32, LMAX = 1330, GB = 84, cur = v.idx;
+  var W = Math.min(LMAX, 1025 + 6.7 * n), sp = n > 1 ? Math.min(200, W / (n - 1)) : 0;
+  // Zbyt długa trasa: skala się nie zmienia (rozstaw min. SPMIN). Pierwszy przystanek zostaje po lewej, przejechany odcinek zwija się
+  // w szary pasek ">>>", a gdy reszta się nie mieści, zwija się też koniec (pasek przed przystankiem końcowym). Gdy całość mieści się bez nakładania, paski znikają.
+  var aV = 0, bV = n - 1, lbar = false, rbar = false, leftSpan = 0;
+  if (n > 1 && sp < SPMIN) {
+    sp = SPMIN;
+    if ((n - 1) * sp > LMAX) {
+      W = LMAX;
+      var a0 = Math.max(0, cur - 6);                                       // kilka ostatnich przejechanych przystanków zostaje widocznych
+      if (a0 >= 2) { aV = a0; lbar = true; leftSpan = GB; }
+      if ((n - 1 - aV) * sp > W - leftSpan) { bV = Math.min(n - 2, aV + Math.floor((W - leftSpan - GB) / sp)); rbar = true; }
+    } else W = sp * (n - 1);
+  } else W = sp * (n - 1);
+  var x0 = CX - W / 2, xl = x0 + W;
   var t = Math.max(0, Math.min(1, (sp - 48) / 131));            // 0 = gęsta trasa, 1 = krótka trasa (większe elementy)
-  var k = 1 + 0.12 * t, Y = 299 + 28 * t, STRIP_Y = Y + 11, BAR_Y = Y + 33, BAR_H = Math.round(24 * k), ye = BAR_Y + BAR_H;
+  var ZI = zoneOf(v.stops), k = 1 + 0.12 * t, Y = 299 + 28 * t, ZH = ZI ? Math.round(13 * k) : 0;
+  var STRIP_Y = Y + 11, MBOT = Y + 33, BAR_Y = MBOT + ZH, BAR_H = Math.round(24 * k), ye = BAR_Y + BAR_H;
   var font = sp <= 48 ? 13.8 + 4 * Math.max(0, sp - 32) / 16 : 17.8 - 2.8 * Math.min(1, (sp - 48) / 131);
   var ang = Math.max(45, Math.min(75, Math.asin(Math.min(1, font * 1.2 / Math.max(sp, 1))) * 180 / Math.PI));
-  var rad = ang * Math.PI / 180, cur = v.idx;
-  function xOf(i){ return x0 + i * sp; }
+  var rad = ang * Math.PI / 180;
+  function vis(i){ return i === 0 || i === n - 1 || (i >= aV && i <= bV); }
+  function xOf(i){                                                // ukryte przystanki leżą wewnątrz zwiniętego paska
+    if (i <= 0) return x0;
+    if (i >= n - 1) return rbar ? xl : x0 + leftSpan + (n - 1 - aV) * sp;
+    if (i < aV) return x0 + leftSpan * i / aV;
+    if (i > bV) { var xb = x0 + leftSpan + (bV - aV) * sp; return xb + (xl - xb) * (i - bV) / (n - 1 - bV); }
+    return x0 + leftSpan + (i - aV) * sp;
+  }
   function box(cls, l, tp, w, h, css){
     var d = document.createElement("div"); d.className = cls;
     d.style.cssText = "left:" + l + "px;top:" + tp + "px;" + (w ? "width:" + w + "px;" : "") + (h ? "height:" + h + "px;" : "") + (css || "");
@@ -712,44 +823,66 @@ function drawDiag(v, T){
   }
   var barL = xOf(0) - 8, barR = xOf(n - 1) + 8, LW = Math.round(6 * k);
   var doneK = v.atStop ? cur : Math.max(cur - 1, 0);
-  box("ln", xOf(0), Y - LW / 2, xOf(doneK) - xOf(0), LW, "background:#c4c4c4");
-  box("ln", xOf(doneK), Y - LW / 2, xOf(n - 1) - xOf(doneK), LW, "background:" + T.dot);
+  var xa0 = xOf(aV), xb0 = xOf(bV), xd = Math.max(xa0, Math.min(xb0, xOf(doneK)));
+  box("ln", xa0, Y - LW / 2, xd - xa0, LW, "background:#c4c4c4");
+  box("ln", xd, Y - LW / 2, xb0 - xd, LW, "background:" + T.dot);
+  function cbar(xa, xb, col){                                     // zwinięty odcinek: pasek z szewronami
+    var h = Math.round(12 * k), w = xb - xa, cx = w / 2, c = "";
+    for (var q = -1; q <= 1; q++) c += '<polyline points="' + (cx + q * 12 - 3) + "," + (h / 2 - 4) + " " + (cx + q * 12 + 2) + "," + (h / 2) + " " + (cx + q * 12 - 3) + "," + (h / 2 + 4) + '" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    box("ln cb", xa, Y - h / 2, w, h, "background:" + col).innerHTML = '<svg width="' + w + '" height="' + h + '">' + c + '</svg>';
+  }
+  if (lbar) cbar(xOf(0), xa0, "#b4b4b4");
+  if (rbar) cbar(xb0, xOf(n - 1), T.dot);
 
   // ulice (wygładzone: pojedynczy przystanek na innej ulicy nie tworzy odcinka)
   var SG = streetSegs(v.stops), st = SG.st, segs = SG.segs;
   var haveStreets = st.some(function(x){ return x; });
   var hasMinutes = v.stops.every(function(s){ return s.min != null; });
-    box("bar", barL, BAR_Y, barR - barL, BAR_H);
+  box("bar", barL, BAR_Y, barR - barL, BAR_H);
 
-  // dzielnice na pasku
-  var g0 = 0, DZ = Math.round(13 * k);
-  while (g0 < n) {
-    var lab = v.stops[g0].dz || "", g1 = g0;
-    while (g1 + 1 < n && (v.stops[g1 + 1].dz || "") === (v.stops[g0].dz || "")) g1++;
-    var xa = g0 === 0 ? barL : (xOf(g0 - 1) + xOf(g0)) / 2, xb = g1 === n - 1 ? barR : (xOf(g1) + xOf(g1 + 1)) / 2;
+  // dzielnice na pasku (tylko widoczne przystanki)
+  var V = [], g0 = 0, DZ = Math.round(13 * k), vi;
+  for (vi = 0; vi < n; vi++) if (vis(vi)) V.push(vi);
+  while (g0 < V.length) {
+    var lab = v.stops[V[g0]].dz || "", g1 = g0;
+    while (g1 + 1 < V.length && (v.stops[V[g1 + 1]].dz || "") === lab) g1++;
+    var xa = g0 === 0 ? barL : (xOf(V[g0 - 1]) + xOf(V[g0])) / 2, xb = g1 === V.length - 1 ? barR : (xOf(V[g1]) + xOf(V[g1 + 1])) / 2;
     if (g0 > 0) box("gap", xa - 1, BAR_Y, 2, BAR_H);
     if (lab) { var dz = box("dz", xa + 2, BAR_Y, xb - xa - 4, BAR_H, "font-size:" + DZ + "px;line-height:" + BAR_H + "px"); dz.textContent = lab; }
     g0 = g1 + 1;
   }
 
-  // pas minut od pierwszego przystanku (jak na wyświetlaczu): kreski między przystankami i etykiety 0' 2' 3' ...
-  if (v.stops.every(function(s){ return s.min != null; })) {
-    var m0 = v.stops[0].min, MF = Math.round(12.5 * k), MY = STRIP_Y - 1, MH = BAR_Y - MY;
-    var hasMin = true;
+  // pas minut od pierwszego przystanku (jak na wyświetlaczu): etykiety 0' 2' 3' ...
+  if (hasMinutes) {
+    var m0 = v.stops[0].min, MF = Math.round(12.5 * k), MY = STRIP_Y - 1, MH = MBOT - MY;
     v.stops.forEach(function(s2, i2){
+      if (!vis(i2)) return;
       var ml = box("mn", xOf(i2) - 20, MY, 40, MH, "font-size:" + MF + "px;line-height:" + MH + "px");
       ml.textContent = (s2.min - m0) + "'";
     });
   }
 
+  // strefy biletowe: tylko dla linii, które wyjeżdżają poza strefę 1; podział w przystanku granicznym
+  if (ZI) {
+    var zs0 = 0, ZFS = (11.5 * k).toFixed(1);
+    var zb = function(i){ return i >= n ? barR : (ZI.zs[i] === "12" ? xOf(i) : (xOf(i - 1) + xOf(i)) / 2); };
+    for (var zi = 1; zi <= n; zi++) if (zi === n || ZI.mz[zi] !== ZI.mz[zs0]) {
+      var za = zs0 === 0 ? barL : zb(zs0), zz = zb(zi);
+      var zbx = box("zn z" + ZI.mz[zs0], za, MBOT, zz - za, ZH, "font-size:" + ZFS + "px;line-height:" + (ZH - 2) + "px");
+      zbx.textContent = "strefa " + ZI.mz[zs0];
+      zs0 = zi;
+    }
+  }
+
   // kółka: z kropką = zwykły przystanek, puste = na żądanie; końcowe nieco większe
   v.stops.forEach(function(s, i){
+    if (!vis(i)) return;
     var x = xOf(i), passed = i < cur, end = i === 0 || i === n - 1, nz = s.typ === "2";
     var col = passed ? "#a9a9a9" : T.dot, size = Math.round((end ? 20 : 17) * k), bd = Math.max(3, Math.round(3.3 * k));
     var fill = nz ? "#fff" : "radial-gradient(circle," + col + " 0 " + (3.6 * k).toFixed(1) + "px,#fff " + (4.2 * k).toFixed(1) + "px)";
     if (end) fill = "radial-gradient(circle," + col + " 0 " + (4 * k).toFixed(1) + "px,#fff " + (4.6 * k).toFixed(1) + "px)";
     box("dot", x - size / 2, Y - size / 2, size, size, "border:" + bd + "px solid " + col + ";background:" + fill);
-    var f = (end ? font * 1.1 : font), bh = Math.round(f * 1.35);
+    var f = (end ? font * 1.1 : font), bh = Math.round(f * 1.35), nsx = 1;
     var nm = box("nm" + (passed ? " past" : "") + (end && !passed ? " end" : "") + (i === cur ? " cur" : ""), x - 3 + (bh / 2) * Math.sin(rad), Y - 11 - bh, 0, bh);
     nm.style.width = "auto"; nm.style.lineHeight = bh + "px"; nm.style.fontSize = f + "px";
     var tn = document.createElement("span"); tn.className = "tn"; tn.textContent = s.name; nm.appendChild(tn);
@@ -757,16 +890,27 @@ function drawDiag(v, T){
     if (t > 0.3 && !passed) nm.style.fontWeight = 600;
     var room = Math.min((1905 - x) / Math.cos(rad), (Y - 11 - 105) / Math.sin(rad)), maxW = Math.max(60, Math.min(300, room)), tf = "rotate(-" + ang + "deg)";
     if (nm.scrollWidth > maxW) {
-      var sx = Math.max(0.6, maxW / nm.scrollWidth); tf += " scaleX(" + sx + ")";
+      var sx = Math.max(0.6, maxW / nm.scrollWidth); nsx = sx; tf += " scaleX(" + sx + ")";
       if (nm.scrollWidth * sx > maxW) { var extra = nm.scrollWidth - tn.offsetWidth; tn.style.display = "inline-block"; tn.style.verticalAlign = "bottom"; tn.style.overflow = "hidden"; tn.style.textOverflow = "ellipsis"; tn.style.maxWidth = Math.max(40, maxW / sx - extra) + "px"; }
     }
     nm.style.transform = tf;
+    if (ZI && ZI.bd[i]) {                                           // czerwona etykieta przy nazwie przystanku granicznego (pod tym samym kątem)
+      var gl = box("gw", x - 3 + (bh / 2) * Math.sin(rad), Y - 11 - bh, 0, bh), effW = nm.offsetWidth * nsx;
+      gl.style.transform = "rotate(-" + ang + "deg)";
+      var gt = document.createElement("span"); gt.className = "gz"; gt.textContent = "granica strefy biletowej";
+      gt.style.left = (effW + 8) + "px"; gt.style.fontSize = (f * 0.82).toFixed(1) + "px"; gt.style.lineHeight = Math.round(f * 1.1) + "px"; gt.style.top = Math.round((bh - f * 1.1) / 2) + "px";
+      gl.appendChild(gt);
+      var availL = (Y - 11 - 70) / Math.sin(rad) - effW - 10, gw = gt.offsetWidth;
+      if (gw > availL) gt.style.transform = "scaleX(" + Math.max(0.5, availL / gw) + ")";
+    }
   });
 
   // kreski ulic: w miejscu zmiany ulicy ukośnie w dół w lewo (45°), nazwa wzdłuż odcinka między kreskami
   if (haveStreets) {
-    var DROP = 118, SF = 13 * k, kept = [];
+    var DROP = 118 - ZH, SF = 13 * k, kept = [];
     segs.forEach(function(sg){
+      if (sg.a >= 1 && sg.b <= aV - 1) return;                         // odcinek w całości w zwiniętej części
+      if (sg.a >= bV + 1 && sg.b <= n - 2) return;
       var xa = sg.a === 0 ? barL : (xOf(sg.a - 1) + xOf(sg.a)) / 2, xb = sg.b === n - 1 ? barR : (xOf(sg.b) + xOf(sg.b + 1)) / 2;
       if (xb - xa < 26) return;
       kept.push({ xa:xa, xb:xb, name:sg.name });
@@ -777,9 +921,8 @@ function drawDiag(v, T){
       if (kept.length) box("ms", kept[kept.length - 1].xb, MY2, 1, BAR_Y - MY2);
     }
     kept.forEach(function(sg, idx){
-      var last = idx === kept.length - 1;
       var xe = sg.xb;                                                   // kreska kończąca odcinek
-            box("sl", xe - DROP * Math.SQRT2, ye, DROP * Math.SQRT2, 0, "transform:rotate(-45deg)");
+      box("sl", xe - DROP * Math.SQRT2, ye, DROP * Math.SQRT2, 0, "transform:rotate(-45deg)");
       if (!sg.name) return;
       var dc = 56, cx = (sg.xa + sg.xb) / 2 - dc, cy = ye + dc;
       var tx = box("st", cx, cy, 0, 0); tx.style.width = "auto"; tx.style.fontSize = SF + "px"; if (t > 0.3) tx.style.fontWeight = 600; tx.textContent = sg.name;

@@ -17,12 +17,18 @@ Trasa, kropki, strzałka i nazwa przystanku są fioletowe (jak na prawdziwych wy
 
 ## Ulice, dzielnice, dostępność
 - Nazwy ulic i dzielnice pobiera w tle `serve.py` z OpenStreetMap (Nominatim, 1 zapytanie/s) i zapamiętuje w `geo_cache.sqlite`. Pierwsze otwarcie długiej linii wypełnia się około minuty, potem jest od razu. Możesz ustawić `SIP_CONTACT=twoj@mail` (zalecane przez Nominatim).
-- Ikony wózka przy przystankach biorą się z `wheelchair_boarding` w GTFS (2 = czerwona ikona).
+- Ikony wózka przy przystankach biorą się z `wheelchair_boarding` w GTFS: 2 (i `p`) = niebieska ikona „utrudniony dostęp”. Czerwonej „niedostępny” nie rysujemy, bo dane nie mają takiego stanu; w legendzie na dole ekranu są obie.
 - Przesiadki to linie zatrzymujące się na przystankach o tej samej nazwie.
 - Gdyby trasy się nie wczytywały: usuń `gtfs-cache.json` i uruchom ponownie (serwer pobierze GTFS od nowa).
 
+## Strefy biletowe i długie trasy
+- Strefy czytane są z kolumny `zone_id` w GTFS (1, 2 oraz 1+2 na granicy; po zmianie `serve.py` usuń `gtfs-cache.json`, żeby cache zbudował się z kolumną stref). Tylko linie, które wyjeżdżają poza strefę 1, mają pasek „strefa 2” / „strefa 1” pod trasą oraz czerwoną etykietę „granica strefy biletowej” przy przystanku granicznym (ta sama etykieta pojawia się w nagłówku, gdy to bieżący przystanek, a nazwa granicy jest też w panelu pod ekranem). Linie tylko w strefie 1 nie mają żadnych oznaczeń stref.
+- Zbyt długa trasa nie zmienia skali: pierwszy przystanek zostaje po lewej, przejechany odcinek zwija się w szary pasek „>>>”, a gdy reszta się nie mieści, zwija się też koniec (fioletowy pasek przed przystankiem końcowym). Gdy cała trasa mieści się bez nakładania, paski znikają.
+- Zbyt długa nazwa bieżącego przystanku w nagłówku ma stałą wielkość pisma i dzieli się na części, które co 2,6 s wjeżdżają od góry w dół.
+- Przedrostek miejscowości jest obcinany tylko przy spacji („Ząbki Maczka” → „Maczka”); nazwy z łącznikiem („Sowia Wola-Szkoła”) zostają w całości.
+
 ## Zapowiedzi głosowe
-Zaznacz „Zapowiedzi głosowe” (albo otwórz stronę z `?voice=1`). Przy każdym kroku odtwarza się: gong, „Następny przystanek” + nazwa (oraz „na żądanie” i przesiadka do M1/M2), a na przystanku: gong, „Przystanek” + nazwa. Na pierwszym przystanku dodatkowo „Linia … kierunek …”, a na ostatnim „Przystanek końcowy, prosimy o opuszczenie pojazdu”.
+Zaznacz „Zapowiedzi głosowe” (albo otwórz stronę z `?voice=1`). Przy każdym kroku odtwarza się: gong, „Następny przystanek” + nazwa (oraz „na żądanie” i przesiadka do M1/M2), a na przystanku: gong, „Przystanek” + nazwa. Na pierwszym przystanku dodatkowo „Linia … kierunek …”, a na ostatnim „Przystanek końcowy, prosimy o opuszczenie pojazdu”. Po każdej zapowiedzi (poza przystankiem końcowym) odtwarza się „Możliwa kontrola biletów”.
 Nagrania pochodzą z banku `gtfscc.github.io/zapowiedzi*` (katalog w `zapowiedzi.json`, budowany skryptem `tools/build_zapowiedzi.py` z pliku HTML z bankiem). Przystanki bez nagrania są pomijane (nazwa trafia do konsoli przeglądarki).
 Tryb kiosku: Chrome blokuje dźwięk bez kliknięcia, więc uruchom go z `--autoplay-policy=no-user-gesture-required`.
 
