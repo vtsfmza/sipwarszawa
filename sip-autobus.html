@@ -513,7 +513,9 @@ function fetchGeo(stops){
     stops.forEach(function(s){
       var g = j.geo && j.geo[s.id]; if (!g) return;
       var nn = shortName(s.full || s.name, g.place);
-      if (s.street !== (g.street || "") || s.dz !== (g.district || "") || s.name !== nn) { s.street = g.street || ""; s.dz = g.district || ""; s.full = s.full || s.name; s.name = nn; changed = true; }
+      var pl = String(g.place || "").split("|").filter(Boolean), waw = pl.some(function(c){ return /^warszawa$/i.test(c); });
+      var dzv = waw ? (g.district || "") : (pl[0] || g.district || "");     // pasek: w Warszawie dzielnica, poza nią tylko miejscowość (bez osiedli i części wsi)
+      if (s.street !== (g.street || "") || s.dz !== dzv || s.name !== nn) { s.street = g.street || ""; s.dz = dzv; s.full = s.full || s.name; s.name = nn; changed = true; }
     });
     if (changed) render();
     if (j.pending > 0 && ++geoTries < 1000) geoTimer = setTimeout(function(){ fetchGeo(stops); }, 1500);
@@ -844,9 +846,12 @@ function drawDiag(v, T){
   // dzielnice na pasku (tylko widoczne przystanki)
   var V = [], g0 = 0, DZ = Math.round(13 * k), vi;
   for (vi = 0; vi < n; vi++) if (vis(vi)) V.push(vi);
+  var dzs = v.stops.map(function(s3){ return s3.dz || ""; }), dq;           // przystanek bez nazwy bierze ją od sąsiada, żeby na pasku nie było dziur
+  for (dq = 1; dq < n; dq++) if (!dzs[dq]) dzs[dq] = dzs[dq - 1];
+  for (dq = n - 2; dq >= 0; dq--) if (!dzs[dq]) dzs[dq] = dzs[dq + 1];
   while (g0 < V.length) {
-    var lab = v.stops[V[g0]].dz || "", g1 = g0;
-    while (g1 + 1 < V.length && (v.stops[V[g1 + 1]].dz || "") === lab) g1++;
+    var lab = dzs[V[g0]], g1 = g0;
+    while (g1 + 1 < V.length && dzs[V[g1 + 1]] === lab) g1++;
     var xa = g0 === 0 ? barL : (xOf(V[g0 - 1]) + xOf(V[g0])) / 2, xb = g1 === V.length - 1 ? barR : (xOf(V[g1]) + xOf(V[g1 + 1])) / 2;
     if (g0 > 0) box("gap", xa - 1, BAR_Y, 2, BAR_H);
     if (lab) { var dz = box("dz", xa + 2, BAR_Y, xb - xa - 4, BAR_H, "font-size:" + DZ + "px;line-height:" + BAR_H + "px"); dz.textContent = lab; }
