@@ -513,7 +513,7 @@ function drawHdr(v){
   h.style.left = Math.max(380, 1123 - w * sc / 2) + "px";
 }
 // ---------- Zapowiedzi głosowe (nagrania z banku gtfscc.github.io, katalog w zapowiedzi.json) ----------
-var VOICE = { cat:null, idx:null, queue:[], audio:null, lastKey:"", loading:false };
+var VOICE = { cat:null, idx:null, queue:[], audio:null, lastKey:"", loading:false, gong:/[?&]gong=1(&|$)/.test(location.search) };  // gong BUSE tylko z ?gong=1
 function nk(x){ return String(x).toLowerCase().replace(/\(ż\)/g, "").replace(/[\s.\-–,]+/g, ""); }
 function vUrl(val){ var m = /^\{Q(\d)\}(.+)$/.exec(val); return m ? VOICE.cat.base[m[1]] + encodeURIComponent(m[2]) : null; }
 function vSnd(label){ var v = VOICE.cat.sounds[label]; return v ? vUrl(v) : null; }
@@ -544,7 +544,7 @@ function announce(v){
   function add(u){ if (u) q.push(u); }
   function name(st){ var u = vStop(st.name); if (u) q.push(u); else miss.push(st.name); }
   if (v.atStop) {
-    add(vSnd("Gong BUSE - Przystanek"));
+    if (VOICE.gong) add(vSnd("Gong BUSE - Przystanek"));
     if (v.idx === 0) {
       add(vSnd("Linia (WTP)")); add(vSnd(String(v.line).toUpperCase()));
       add(vSnd("Kierunek (WTP)")); name(v.stops[v.stops.length - 1]);
@@ -552,7 +552,8 @@ function announce(v){
     add(vSnd(nz ? "Przystanek na Żądanie (WTP)" : "Przystanek (WTP)")); name(s);
     if (last) add(vSnd("Przystanek końcowy, prosimy o opuszczenie pojazdu (WTP)"));
   } else {
-    add(vSnd("Gong BUSE - Następny przystanek")); add(vSnd("Następny Przystanek (WTP)")); name(s);
+    if (VOICE.gong) add(vSnd("Gong BUSE - Następny przystanek"));
+    add(vSnd("Następny Przystanek (WTP)")); name(s);
     if (nz) add(vSnd("Przystanek na Żądanie (WTP)"));
     var all = transfersAt(s, v.line).map(function(g){ return g.lines; }).join(" ").split(" ");
     ["M1", "M2"].forEach(function(m){ if (all.indexOf(m) >= 0) add(vSnd("Możliwość przesiadki do pociągów linii metra " + m + " (Metro)")); });
