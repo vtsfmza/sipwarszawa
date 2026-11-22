@@ -151,7 +151,7 @@ button{padding:4px 10px}
 #diag .cb{border-radius:999px}
 #diag .cb svg{display:block}
 #diag .gw{position:absolute;transform-origin:0 100%;white-space:nowrap}
-#diag .gw .gz{position:absolute;top:0;background:#d3232f;color:#fff;font-weight:700;border-radius:2px;padding:0 4px;white-space:nowrap;transform-origin:0 50%}
+#diag .gw .gz{position:absolute;top:0;background:#d3232f;color:#fff;font-weight:700;border-radius:3px;padding:0 8px;white-space:nowrap;transform-origin:0 50%}
 #hdr .trw{display:flex;align-items:center;height:62px;overflow:hidden;margin-left:12px;align-self:center;flex:none}
 #hdr .tri{display:flex;align-items:center;width:100%;line-height:1.12;font-size:19px;color:#444;font-weight:400;white-space:normal;max-width:100%}
 #hdr .tg{display:flex;align-items:center;flex:1 1 auto;min-width:0}
@@ -160,7 +160,7 @@ button{padding:4px 10px}
 #hdr .tg .tl{min-width:0}
 #hdr .ti2{position:static;display:inline-block;width:1.25em;height:1.25em;vertical-align:-.25em;margin:0 .3em 0 .7em}
 #hdr .tl{white-space:normal}
-#hdr .hz{display:inline-block;vertical-align:middle;margin-left:16px;background:#d3232f;color:#fff;font-size:20px;font-weight:700;line-height:1;padding:5px 10px;border-radius:3px}
+#hdr .hz{display:inline-block;vertical-align:middle;margin-left:18px;background:#d3232f;color:#fff;font-size:46px;font-weight:700;line-height:1.2;padding:0 14px;border-radius:4px}
 #hdr .nmw{position:relative;display:inline-block;overflow:hidden;height:62px;align-self:center}
 #hdr .nmp{position:absolute;left:0;top:0;white-space:nowrap;font-size:46px;font-weight:700;line-height:62px}
 #diag .nsw{position:relative;display:inline-block;overflow:hidden;vertical-align:top}
@@ -912,7 +912,7 @@ function drawDiag(v, T){
       var gl = box("gw", x - 3 + (bh / 2) * Math.sin(rad), Y - 11 - bh, 0, bh), effW = nm.offsetWidth;
       gl.style.transform = "rotate(-" + ang + "deg)";
       var gt = document.createElement("span"); gt.className = "gz"; gt.textContent = "granica strefy biletowej";
-      gt.style.left = (effW + 8) + "px"; gt.style.fontSize = (f * 0.82).toFixed(1) + "px"; gt.style.lineHeight = Math.round(f * 1.1) + "px"; gt.style.top = Math.round((bh - f * 1.1) / 2) + "px";
+      gt.style.left = (effW + 8) + "px"; gt.style.fontSize = f + "px"; gt.style.fontWeight = getComputedStyle(nm).fontWeight; gt.style.lineHeight = bh + "px"; gt.style.top = "0px";
       gl.appendChild(gt);
       var availL = (Y - 11 - 100) / Math.sin(rad) - effW - 10, gw = gt.offsetWidth;
       if (gw > availL) gt.style.transform = "scaleX(" + Math.max(0.5, availL / gw) + ")";
