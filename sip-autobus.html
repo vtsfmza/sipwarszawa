@@ -654,7 +654,6 @@ function drawDiag(v, T){
     var nm = box("nm" + (passed ? " past" : "") + (end && !passed ? " end" : "") + (i === cur ? " cur" : ""), x - 3 + (bh / 2) * Math.sin(rad), Y - 11 - bh, 0, bh);
     nm.style.width = "auto"; nm.style.lineHeight = bh + "px"; nm.style.fontSize = f + "px";
     var tn = document.createElement("span"); tn.className = "tn"; tn.textContent = s.name; nm.appendChild(tn);
-    if (nz) { var zs = document.createElement("span"); zs.className = "zz"; zs.textContent = " (Ż)"; nm.appendChild(zs); }
     if (s.wc) { var im = document.createElement("img"); im.src = "img/wheelchair_" + s.wc + ".png"; im.alt = ""; nm.appendChild(im); }
     if (t > 0.3 && !passed) nm.style.fontWeight = 600;
     var room = Math.min((1905 - x) / Math.cos(rad), (Y - 11 - 105) / Math.sin(rad)), maxW = Math.max(60, Math.min(300, room)), tf = "rotate(-" + ang + "deg)";
