@@ -245,6 +245,7 @@ button{padding:4px 10px}
   <section class="panel wide">
     <div class="btns">
       <button id="full">Pełny ekran</button>
+      <button id="openSide" title="Otwiera tablicę boczną w nowej karcie; pokazuje tę samą linię, cel i ulice trasy">Tablica boczna ↗</button>
       <span class="sub">Podgląd na górze jest skalowany. Pełny ekran daje dokładnie 1920×540 na ekranie tej wielkości.</span>
     </div>
   </section>
@@ -578,7 +579,7 @@ function drawHdr(v){
 }
 // ---------- Zapowiedzi głosowe (nagrania z banku gtfscc.github.io, katalog w zapowiedzi.json) ----------
 var VOICE = { cat:null, idx:null, queue:[], audio:null, lastKey:"", loading:false, gong:/[?&]gong=1(&|$)/.test(location.search) };  // gong BUSE tylko z ?gong=1
-function nk(x){ return String(x).toLowerCase().replace(/\(ż\)/g, "").replace(/[\s.\-–,]+/g, ""); }
+function nk(x){ return String(x).toLowerCase().replace(/\(ż\)/g, "").replace(/[\s.\-–,"'„”“«»]+/g, ""); }     // cudzysłowy w kluczach katalogu (rondo "radosława") nie mogą blokować dopasowania
 function vUrl(val){ var m = /^\{Q(\d)\}(.+)$/.exec(val); return m ? VOICE.cat.base[m[1]] + encodeURIComponent(m[2]) : null; }
 function vSnd(label){ var v = VOICE.cat.sounds[label]; return v ? vUrl(v) : null; }
 function vStop(name){
@@ -653,11 +654,41 @@ function render(){
   ["num","diag","hdr","clock","foot"].forEach(function(id){ $(id).hidden = standby; });
   ["strip","name","dest","list"].forEach(function(id){ $(id).hidden = true; });
   applyInfo(standby);
-  if (standby) { $("bg").src = IMG.standby; return; }
+  if (standby) { $("bg").src = IMG.standby; sipPublish(null); return; }
   $("bg").src = T.bg;
   var num = $("num"); num.style.color = T.num; $("diag").style.setProperty("--lc", T.dot);
   var ns = num.firstChild; ns.textContent = v.line; fit(ns, 190, 86); ns.style.transformOrigin = "center";
-  drawHdr(v); drawDiag(v, T); voiceCheck(v);
+  drawHdr(v); drawDiag(v, T); sipPublish(v); voiceCheck(v);
+}
+// Ulice trasy (wygładzone: pojedynczy przystanek na innej ulicy nie tworzy odcinka). Używa tego pasek ulic i tablica boczna.
+function streetSegs(stops){
+  var n = stops.length;
+  var BAD = /^(pętla|petla|parking|zajezdnia|dojazd|plac manewrowy|stacja|przystanek|dworzec autobusowy)|autobusow/i;
+  var st = stops.map(function(s){ return BAD.test(s.street || "") ? "" : (s.street || ""); });
+  for (var b1 = 1; b1 < n; b1++) if (!st[b1]) st[b1] = st[b1 - 1];                 // nie-ulice (pętle, parkingi) nie tworzą odcinków
+  for (var b2 = n - 2; b2 >= 0; b2--) if (!st[b2]) st[b2] = st[b2 + 1];
+  for (var q = 1; q < n - 1; q++) if (st[q] !== st[q - 1] && st[q - 1] === st[q + 1]) st[q] = st[q - 1];
+  var segs = [], a0 = 0;
+  for (var q2 = 1; q2 <= n; q2++) if (q2 === n || st[q2] !== st[a0]) { segs.push({ a:a0, b:q2 - 1, name:st[a0] }); a0 = q2; }
+  return { st:st, segs:segs };
+}
+// Połączenie z tablicami bocznymi/podsufitką: stan (linia, cel, ulice trasy) trafia do localStorage ("sip_state"),
+// a inne karty tej samej strony odbierają go przez zdarzenie "storage". Publikujemy tylko, gdy coś się zmieniło.
+var SIP_LAST = "";
+function sipPublish(v){
+  var o = { standby:true };
+  if (v && v.mode === "run" && v.stops.length) {
+    var last = v.stops[v.stops.length - 1], names = [];
+    streetSegs(v.stops).segs.forEach(function(g){ if (g.name && names[names.length - 1] !== g.name) names.push(g.name); });
+    var cs = v.stops[v.idx], nn = v.stops.length;
+    o = { line:v.line, type:v.type, dest:last.full || last.name, streets:names,
+          stop:cs.name, typ2:cs.typ, atStop:!!v.atStop,                       // bieżący/następny przystanek (dla podsufitki)
+          prog:nn > 1 ? Math.max(0, Math.min(1, (v.idx + (v.atStop ? 0 : -0.5)) / (nn - 1))) : 1 };
+  }
+  var s = JSON.stringify(o);
+  if (s === SIP_LAST) return;
+  SIP_LAST = s;
+  try { localStorage.setItem("sip_state", s); } catch(e){}
 }
 // Cała trasa wg ekranu z autobusu: wyśrodkowana na x≈1049, rozstaw zależy od liczby przystanków,
 // pas na minuty, czerwony pasek z dzielnicami, pod nim ukośne kreski z ulicami
@@ -684,13 +715,7 @@ function drawDiag(v, T){
   box("ln", xOf(doneK), Y - LW / 2, xOf(n - 1) - xOf(doneK), LW, "background:" + T.dot);
 
   // ulice (wygładzone: pojedynczy przystanek na innej ulicy nie tworzy odcinka)
-  var BAD = /^(pętla|petla|parking|zajezdnia|dojazd|plac manewrowy|stacja|przystanek|dworzec autobusowy)|autobusow/i;
-  var st = v.stops.map(function(s){ return BAD.test(s.street || "") ? "" : (s.street || ""); });
-  for (var b1 = 1; b1 < n; b1++) if (!st[b1]) st[b1] = st[b1 - 1];                 // nie-ulice (pętle, parkingi) nie tworzą odcinków
-  for (var b2 = n - 2; b2 >= 0; b2--) if (!st[b2]) st[b2] = st[b2 + 1];
-  for (var q = 1; q < n - 1; q++) if (st[q] !== st[q - 1] && st[q - 1] === st[q + 1]) st[q] = st[q - 1];
-  var segs = [], a0 = 0;
-  for (var q2 = 1; q2 <= n; q2++) if (q2 === n || st[q2] !== st[a0]) { segs.push({ a:a0, b:q2 - 1, name:st[a0] }); a0 = q2; }
+  var SG = streetSegs(v.stops), st = SG.st, segs = SG.segs;
   var haveStreets = st.some(function(x){ return x; });
   var hasMinutes = v.stops.every(function(s){ return s.min != null; });
     box("bar", barL, BAR_Y, barR - barL, BAR_H);
@@ -986,6 +1011,7 @@ function fitStage(){
   $("voice").addEventListener("change", voiceToggle);
   $("gtfsFetch").addEventListener("click", gtfsFetch);
   $("gtfsFile").addEventListener("change", gtfsFile);
+  $("openSide").addEventListener("click", function(){ window.open("sip-boczny.html", "sip_boczny"); });
   $("full").addEventListener("click", function(){ var w = $("wrap"); if (document.fullscreenElement) document.exitFullscreen(); else if (w.requestFullscreen) w.requestFullscreen(); });
   document.addEventListener("fullscreenchange", fitStage);
   window.addEventListener("resize", fitStage);

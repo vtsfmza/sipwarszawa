@@ -33,3 +33,11 @@ Dane M1 (stacje, minuty, dzielnice) pochodzą z ekranu w wagonie; **dane M2 są 
 
 ## Czcionki
 Oryginalne pliki Frutiger w `Fonts/` mają zepsute kodowanie (symbolowe) i nie zawierają polskich liter ą ć ę ń ś ź ż, przez co przeglądarka podstawiała inną czcionkę w środku słowa. Skrypt `tools/fix_fonts.py` (wymaga `pip install fonttools`) tworzy poprawione kopie w `Fonts/pl/` z dorobionymi polskimi literami, a strona używa właśnie ich.
+
+## Tablica boczna i podsufitka (połączone z SIP)
+`sip-autobus.html` publikuje w `localStorage` ("sip_state") linię, cel (ostatni przystanek), listę **ulic** trasy (te same, które są na pasku ulic) oraz bieżący przystanek. Strony poniżej odbierają to na żywo przez zdarzenie `storage`, więc muszą być otwarte **w tej samej przeglądarce i pod tym samym adresem** co SIP (np. http://localhost:8000). Przycisk „Tablica boczna ↗” w SIP otwiera pierwszą z nich.
+
+- **`sip-boczny.html`**: matryca LED 192×24. Numer linii dużą czcionką 24×12, cel czcionką 9×8, na dole przewijane `TRASA: ULICA-ULICA-…` (ulice, nie przystanki; „Aleja/Aleje” skracane do „Al.”, „Plac” do „Pl.”). Opcje w adresie: `?kiosk=1`, `link=0&line=256&dest=...&route=Ulica1,Ulica2`, `speed=14|22|34`. Znaki z arkuszy czcionek są w `led-font.js`, generowanym przez `tools/build_led_font.py <arkusz 9x8> <arkusz 24x12>`. W arkuszu brakuje V, X, Q i `/`, więc są dorysowane w skrypcie.
+- **`sip-podsufitka.html`**: ekran 1280×720 pod sufitem (numer, cel i trasa w ulicach przewijane, pod spodem bieżący przystanek i pasek postępu; w postoju zegar). Bez SIP działa na własnych danych (`?kiosk=1`, `view=clock`, `short=1`).
+
+Ulice pochodzą z `api/geo` (serve.py), więc bez serwera wiersz TRASA jest pusty.

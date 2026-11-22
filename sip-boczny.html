@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIP Tablica boczna</title>
+<style>
+:root{--bg:#eceef2;--panel:#fff;--fg:#1d2430;--muted:#5d6878;--line:#d5d9e0;--field:#f4f5f7;
+  --ui:"Frutiger","Open Sans","Noto Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#12151b;--panel:#1b2029;--fg:#e6e9ee;--muted:#9aa5b4;--line:#2d3644;--field:#12151b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.35 var(--ui)}
+.page{max-width:1100px;margin:0 auto;padding:8px 12px 12px;display:flex;flex-direction:column;gap:8px}
+h1{margin:0;font-size:16px}
+.sub{color:var(--muted);font-size:12px}
+#controls{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+#controls label{display:flex;align-items:center;gap:6px}
+input[type=text],select,button{font:inherit;color:var(--fg);background:var(--field);border:1px solid var(--line);border-radius:5px;padding:4px 8px}
+input[type=text]:disabled{opacity:.65}
+#line{width:72px}#dest{width:200px}#route{width:340px}
+button{background:transparent;cursor:pointer}
+#st{width:100%;color:var(--muted);font-size:12px}
+#board{display:block;width:100%;height:auto;background:#000;border-radius:4px}
+body.kiosk{background:#000;cursor:none}
+body.kiosk #controls,body.kiosk header{display:none!important}
+body.kiosk .page{max-width:none;padding:0;min-height:100vh;justify-content:center}
+body.kiosk #board{border-radius:0}
+</style>
+</head>
+<body>
+<div class="page">
+  <header><h1>SIP Tablica boczna</h1> <span class="sub">Matryca LED 192×24: numer linii, cel i przewijana trasa (ulice). Czcionki z arkuszy 9×8 i 24×12.</span></header>
+  <div id="controls">
+    <label><input type="checkbox" id="link" checked> Połącz z SIP</label>
+    <label>Linia <input type="text" id="line" autocomplete="off"></label>
+    <label>Cel <input type="text" id="dest" autocomplete="off"></label>
+    <label>Trasa (ulice, po przecinku) <input type="text" id="route" autocomplete="off"></label>
+    <label>Przewijanie <select id="spd"><option value="14">wolno</option><option value="22" selected>normalnie</option><option value="34">szybko</option></select></label>
+    <button id="full">Pełny ekran</button>
+    <div id="st" role="status" aria-live="polite"></div>
+  </div>
+  <canvas id="board" width="1536" height="192" aria-label="Tablica boczna"></canvas>
+</div>
+
+<script src="led-font.js"></script>
+<script>
+(function(){
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+var P = new URLSearchParams(location.search);
+
+var BW = 192, BH = 24, DOT = 8;                        // kolumny, wiersze, piksele na kropkę
+var NUM_X = 3, NUM_W_MIN = 40, TEXT_GAP = 5;           // numer od kolumny 3; tekst zaczyna się po numerze (min. szerokość jak "256")
+var GAP_LOOP = 24;                                     // przerwa między powtórzeniami przewijanego tekstu
+var SM = LEDFONT.small.glyphs, BG = LEDFONT.big.glyphs;
+
+var DEMO = { line:"256", dest:"Zaułek-Szkoła", streets:["Krasnobrodzka","Wolska","Aleja Solidarności","Okopowa"] };
+
+// ---------- bitmapy tekstu ----------
+function lookup(ch, G){
+  if (G[ch]) return G[ch];
+  var b = ch.normalize("NFD").charAt(0).toUpperCase();   // np. É -> E
+  return G[b] || null;
+}
+function scale2(g){                                      // 9x8 -> 2x (gdy dużego znaku nie ma w arkuszu 24x12)
+  var w = g[0], out = [w * 2];
+  for (var r = 1; r <= 12; r++) {
+    var v = 0; for (var c = w - 1; c >= 0; c--) { var b = (g[r] >> c) & 1; v = (v << 2) | (b ? 3 : 0); }
+    out.push(v, v);
+  }
+  return out;
+}
+// zwraca {w, h, px:Uint8Array(w*h)}
+function bitmap(text, set, h, gap, spaceW){
+  var G = set, parts = [], w = 0;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text.charAt(i), g;
+    if (ch === " ") { parts.push({ sp:spaceW }); w += spaceW + gap; continue; }
+    g = lookup(ch, G);
+    if (!g && set === BG) { var s = lookup(ch, SM); g = s ? scale2(s) : null; }
+    if (!g) continue;
+    parts.push({ g:g }); w += g[0] + gap;
+  }
+  w = Math.max(0, w - gap);
+  var px = new Uint8Array(Math.max(1, w) * h), x = 0;
+  parts.forEach(function(p, k){
+    if (p.sp != null) { x += p.sp + gap; return; }
+    var g = p.g;
+    for (var r = 0; r < h && r + 1 < g.length; r++) for (var c = 0; c < g[0]; c++) if ((g[r + 1] >> (g[0] - 1 - c)) & 1) px[r * w + x + c] = 1;
+    x += g[0] + gap;
+  });
+  return { w:w, h:h, px:px };
+}
+function small(text){ return bitmap(text, SM, 12, 1, 4); }
+function big(text){ return bitmap(text, BG, 24, 2, 8); }
+
+// ---------- treść ----------
+function abbr(n){
+  return String(n).replace(/^\s*ulica\s+/i, "").replace(/^(Aleja|Aleje)\s+/i, "Al. ").replace(/^Plac\s+/i, "Pl. ");
+}
+var C = { num:null, dest:null, route:null, textX:0, key:"", t0:0 };
+
+function setContent(line, dest, streets){
+  var key = [line, dest, streets.join("|")].join("¦");
+  if (key === C.key) return;
+  C.key = key; C.t0 = performance.now();
+  var ln = String(line || "").toUpperCase().trim();
+  C.num = big(ln);
+  C.textX = NUM_X + Math.max(NUM_W_MIN, C.num.w) + TEXT_GAP;
+  C.dest = small(String(dest || "").toUpperCase());
+  var tr = streets.length ? "TRASA: " + streets.map(abbr).join("-") : "";
+  C.route = tr ? small(tr.toUpperCase()) : null;
+  last = null;
+}
+
+// ---------- rysowanie ----------
+var cv = $("board"), ctx = cv.getContext("2d"), buf = new Uint8Array(BW * BH), last = null;
+var onS = document.createElement("canvas"), offS = document.createElement("canvas");
+onS.width = onS.height = offS.width = offS.height = DOT;
+(function(){
+  var a = onS.getContext("2d"), b = offS.getContext("2d"), c = DOT / 2;
+  var gl = a.createRadialGradient(c, c, 0, c, c, DOT * .5); gl.addColorStop(0, "#fff"); gl.addColorStop(.62, "#f4f4f4"); gl.addColorStop(1, "rgba(255,255,255,0)");
+  a.fillStyle = gl; a.beginPath(); a.arc(c, c, DOT * .47, 0, 7); a.fill();
+  b.fillStyle = "#1b1b1b"; b.beginPath(); b.arc(c, c, DOT * .36, 0, 7); b.fill();
+})();
+
+function blit(bm, x0, y0, clip0, clip1, shift){        // shift: przesunięcie przewijania (kolumny), period obsługuje wywołujący
+  for (var r = 0; r < bm.h; r++) {
+    var y = y0 + r; if (y < 0 || y >= BH) continue;
+    for (var x = clip0; x < clip1; x++) {
+      var sx = x - x0 + shift;
+      if (sx >= 0 && sx < bm.w && bm.px[r * bm.w + sx]) buf[y * BW + x] = 1;
+    }
+  }
+}
+function scrollShift(bm, areaW, now, speed){
+  if (bm.w <= areaW) return { sh:0, scroll:false };
+  var period = bm.w + GAP_LOOP, el = now - C.t0 - 2000;      // 2 s postoju na początku
+  var pos = el <= 0 ? 0 : Math.floor(el / 1000 * speed);
+  return { sh:pos % period, scroll:true, period:period };
+}
+function blitScroll(bm, y0, x0, x1, now, speed){
+  var areaW = x1 - x0, s = scrollShift(bm, areaW, now, speed);
+  if (!s.scroll) { blit(bm, x0, y0, x0, x1, 0); return s.sh; }
+  blit(bm, x0 - 0, y0, x0, x1, s.sh);                                    // bieżące wystąpienie
+  blit(bm, x0, y0, x0, x1, s.sh - s.period);                             // następne wjeżdża z prawej po przerwie
+  return s.sh;
+}
+
+function frame(now){
+  requestAnimationFrame(frame);
+  var speed = parseFloat($("spd").value) || 22, sig;
+  buf.fill(0);
+  if (C.num) {
+    blit(C.num, NUM_X, 0, 0, BW, 0);
+    var x0 = C.textX, x1 = BW;
+    var a = blitScroll(C.dest, 0, x0, x1, now, speed);
+    var b = C.route ? blitScroll(C.route, 12, x0, x1, now, speed) : 0;
+    sig = C.key + a + "," + b;
+  } else sig = "-";
+  if (sig === last) return;
+  last = sig;
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, cv.width, cv.height);
+  for (var y = 0; y < BH; y++) for (var x = 0; x < BW; x++) ctx.drawImage(buf[y * BW + x] ? onS : offS, x * DOT, y * DOT);
+}
+
+// ---------- źródło danych: SIP albo ręcznie ----------
+function readSip(){
+  try { var s = localStorage.getItem("sip_state"); return s ? JSON.parse(s) : null; } catch(e){ return null; }
+}
+function splitRoute(t){ return String(t || "").split(/[,;]/).map(function(x){ return x.trim(); }).filter(Boolean); }
+
+function apply(){
+  var linked = $("link").checked;
+  ["line", "dest", "route"].forEach(function(id){ $(id).disabled = linked; });
+  if (!linked) {
+    setContent($("line").value, $("dest").value, splitRoute($("route").value));
+    $("st").textContent = "Tryb ręczny: wpisz linię, cel i ulice (rozdzielone przecinkami).";
+    return;
+  }
+  var s = readSip(), st;
+  if (!s) { s = DEMO; st = "Brak danych z SIP: pokazuję przykład. Otwórz sip-autobus.html (z serve.py) w tej samej przeglądarce i uruchom linię."; }
+  else if (s.standby) { $("line").value = $("dest").value = $("route").value = ""; C.num = null; C.key = ""; last = null; $("st").textContent = "Połączono z SIP: brak uruchomionej linii (tablica zgaszona)."; return; }
+  else st = "Połączono z SIP: linia " + s.line + ((s.streets && s.streets.length) ? "." : ". Ulice jeszcze się wczytują albo serwer ich nie ma (api/geo), więc trasa jest pusta.");
+  $("line").value = s.line; $("dest").value = s.dest; $("route").value = (s.streets || []).join(", ");
+  setContent(s.line, s.dest, s.streets || []);
+  $("st").textContent = st;
+}
+
+function fitKiosk(){}
+function init(){
+  if (P.get("kiosk")) document.body.classList.add("kiosk");
+  if (P.get("link") === "0") $("link").checked = false;
+  if (P.get("line")) { $("link").checked = false; $("line").value = P.get("line"); }
+  if (P.get("dest")) { $("link").checked = false; $("dest").value = P.get("dest"); }
+  if (P.get("route")) { $("link").checked = false; $("route").value = P.get("route"); }
+  if (P.get("speed")) $("spd").value = P.get("speed");
+  ["link", "line", "dest", "route"].forEach(function(id){ $(id).addEventListener(id === "link" ? "change" : "input", apply); });
+  window.addEventListener("storage", function(e){ if (e.key === "sip_state" || e.key === null) apply(); });
+  $("full").addEventListener("click", function(){ var el = document.documentElement; if (document.fullscreenElement) document.exitFullscreen(); else if (el.requestFullscreen) el.requestFullscreen(); });
+  document.addEventListener("keydown", function(e){ if (e.key === "f" && !/input|select/i.test(e.target.tagName)) $("full").click(); });
+  apply();
+  requestAnimationFrame(frame);
+}
+init();
+})();
+</script>
+</body>
+</html>

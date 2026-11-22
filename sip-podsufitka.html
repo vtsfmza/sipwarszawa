@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIP Podsufitka</title>
+<style>
+@font-face{font-family:"Frutiger";src:url("Fonts/Frutiger_Roman.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Frutiger";src:url("Fonts/Frutiger_Bold.ttf") format("truetype");font-weight:700;font-style:normal;font-display:swap}
+:root{--bg:#eceef2;--panel:#fff;--fg:#1d2430;--muted:#5d6878;--line:#d5d9e0;--field:#f4f5f7;
+  --ui:"Frutiger","Open Sans","Noto Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#12151b;--panel:#1b2029;--fg:#e6e9ee;--muted:#9aa5b4;--line:#2d3644;--field:#12151b}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.35 var(--ui)}
+.page{max-width:1100px;margin:0 auto;padding:8px 12px 12px;display:flex;flex-direction:column;gap:8px}
+h1{margin:0;font-size:16px}
+.sub{color:var(--muted);font-size:12px}
+#controls{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+#controls label{display:flex;align-items:center;gap:6px}
+input[type=text],select,button{font:inherit;color:var(--fg);background:var(--field);border:1px solid var(--line);border-radius:5px;padding:4px 8px}
+input[type=text]{width:84px}
+button{background:transparent;cursor:pointer}
+#st{width:100%;color:var(--muted);font-size:12px}
+#st:empty{display:none}
+#wrap{position:relative;width:100%;background:#000;overflow:hidden;border-radius:4px}
+#stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;background:#0a0d16;overflow:hidden;
+  font-family:"Segoe UI","Frutiger","Open Sans","Noto Sans",Arial,sans-serif;color:#fff}
+
+/* nagłówek z linią: numer + przewijane cel i trasa */
+#hdr{position:absolute;left:0;top:0;width:1280px;height:170px;background:linear-gradient(#f7f9fc,#d8e0ea);color:#222}
+#num{position:absolute;left:20px;top:0;height:170px;display:flex;align-items:center;font-weight:700;font-size:136px;letter-spacing:-3px;color:#1b1b1b;white-space:nowrap;transform-origin:0 50%}
+#ar{font-size:44px;font-weight:400;align-self:flex-start;margin-top:26px;margin-left:8px;letter-spacing:0}
+#rows{position:absolute;left:310px;right:0;top:0;height:170px;overflow:hidden}
+.mq{position:absolute;left:0;right:0;overflow:hidden;white-space:nowrap}
+#mqd{top:11px;height:72px}
+#mqt{top:95px;height:66px}
+.mi{display:inline-block;vertical-align:top;white-space:nowrap}
+#mqd .mi{background:#e3202a;color:#fff;font-weight:700;font-size:54px;line-height:72px;padding:0 18px}
+#mqt .mi{font-size:50px;line-height:66px;color:#262626}
+#mqt .mi b{font-weight:700}
+.gp{display:inline-block;width:170px}
+
+/* pasek zegara (postój) */
+#clk{position:absolute;left:0;top:0;width:1280px;height:170px;background:linear-gradient(90deg,#2a2ad6,#2323bd);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 36px}
+#ct{font-size:122px;font-weight:700;letter-spacing:-2px;line-height:1}
+#cw{font-size:38px;font-weight:400;vertical-align:top;margin-left:10px;position:relative;top:10px;letter-spacing:0}
+#cd{font-size:60px;font-weight:700}
+
+/* treść pod nagłówkiem */
+#body{position:absolute;left:0;top:170px;width:1280px;height:550px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+#bl{font-size:42px;color:#9fb0cc;letter-spacing:.04em}
+#bn{font-size:112px;font-weight:700;white-space:nowrap;transform-origin:50% 50%}
+#bx{font-size:34px;color:#c9d3e6;min-height:44px}
+#bp{position:absolute;left:60px;right:60px;bottom:46px;height:10px;border-radius:5px;background:#1f2638}
+#bp i{display:block;height:100%;border-radius:5px;background:#e3202a;width:0}
+
+body.kiosk{background:#000;cursor:none}
+body.kiosk #controls,body.kiosk header{display:none!important}
+body.kiosk .page{padding:0;max-width:none;gap:0}
+body.kiosk #wrap{position:fixed;inset:0;height:auto!important;border-radius:0}
+</style>
+</head>
+<body>
+<div class="page">
+  <header><h1>SIP Podsufitka</h1> <span class="sub">Ekran pod sufitem autobusu 1280×720: nagłówek z linią, celem i trasą (przewijane) oraz zegar w postoju</span></header>
+  <div id="controls">
+    <label><input type="checkbox" id="link" checked> Połącz z SIP</label>
+    <label>Linia <input type="text" id="line" value="189" list="lines" autocomplete="off"><datalist id="lines"></datalist></label>
+    <label>Wariant <select id="variant"></select></label>
+    <label>Widok <select id="view"><option value="line">Linia</option><option value="clock">Zegar (postój)</option></select></label>
+    <label><input type="checkbox" id="short"> Kurs skrócony</label>
+    <button id="prev" aria-label="Poprzedni krok">◀ Wstecz</button>
+    <button id="next" aria-label="Następny krok">Dalej ▶</button>
+    <label><input type="checkbox" id="auto" checked> Przesuwaj automatycznie</label>
+    <button id="full">Pełny ekran</button>
+    <div id="st" role="status" aria-live="polite"></div>
+  </div>
+  <div id="wrap">
+    <div id="stage">
+      <div id="hdr">
+        <div id="num"><span id="nn"></span><span id="ar">→</span></div>
+        <div id="rows"><div class="mq" id="mqd"></div><div class="mq" id="mqt"></div></div>
+      </div>
+      <div id="clk" hidden><div><span id="ct"></span><span id="cw"></span></div><div id="cd"></div></div>
+      <div id="body"><div id="bl"></div><div id="bn"></div><div id="bx"></div><div id="bp"><i></i></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+var P = new URLSearchParams(location.search);
+
+// Dane demonstracyjne (gdy nie działa serve.py z /gtfs/routes.json)
+var DEMO = { stops:{ a:["Plac Zawiszy"], b:["Dworzec Zachodni"], c:["Rondo Daszyńskiego"], d:["Rondo ONZ"], e:["Świętokrzyska"], f:["Centrum"], g:["Metro Politechnika"], h:["Plac Konstytucji"], i:["Rondo Waszyngtona"] },
+  routes:{ "123":[{code:"A1",dir:0,headsign:"Rondo Waszyngtona",streets:["Aleje Jerozolimskie","Plac Zawiszy","Prosta","Jana Pawła II"],stops:[["a","1"],["b","2"],["c","1"],["d","1"],["e","1"],["f","2"],["g","1"],["h","1"],["i","1"]]}] } };
+
+var D = null, V = { line:"", stops:[], dest:"", idx:0, atStop:true, streets:[], prog:null }, EN = false, timer = null, SIPMODE = false;
+var ENON = P.get("en") !== "0";
+
+function names(v){ return v.stops.map(function(x){ var s = D.stops[x[0]]; return { name:s ? s[0] : String(x[0]), typ:x[1] }; }); }
+function variantsOf(line){ return (D && D.routes && D.routes[line]) || []; }
+
+function setStatus(t){ $("st").textContent = t || ""; }
+
+// ---------- przewijany tekst (jak na ekranie w autobusie): tekst wjeżdża z prawej, po dojechaniu do końca zapętla się ----------
+function marquee(el, key, build){
+  if (el._key === key) return;
+  el._key = key;
+  if (el._anim) { el._anim.cancel(); el._anim = null; }
+  el.innerHTML = "";
+  var track = document.createElement("div"); track.style.cssText = "display:inline-block;white-space:nowrap";
+  var a = build(); track.appendChild(a); el.appendChild(track);
+  var w = a.offsetWidth, cw = el.clientWidth, GAP = 170;
+  if (w > cw && track.animate) {
+    var g = document.createElement("span"); g.className = "gp"; track.appendChild(g); track.appendChild(build());
+    var dist = w + GAP;
+    el._anim = track.animate([{ transform:"translateX(0)" }, { transform:"translateX(-" + dist + "px)" }],
+                             { duration:dist / 110 * 1000, iterations:Infinity, easing:"linear" });
+  }
+}
+function mi(text){ var s = document.createElement("span"); s.className = "mi"; s.textContent = text; return s; }
+function abbr(n){ return String(n).replace(/^\s*ulica\s+/i, "").replace(/^(Aleja|Aleje)\s+/i, "Al. ").replace(/^Plac\s+/i, "Pl. "); }
+
+function drawHdr(){
+  var n = V.stops.length, dest = V.dest + ($("short").checked ? " - KURS SKRÓCONY" : "");
+  var nn = $("nn"); nn.textContent = V.line;
+  var num = $("num"); num.style.transform = "none";
+  var w = num.scrollWidth; num.style.transform = w > 275 ? "scaleX(" + (275 / w) + ")" : "none";
+  marquee($("mqd"), "d|" + dest, function(){ return mi(dest); });
+  // trasa: ulice (nie przystanki), cała trasa kursu; bez danych o ulicach wiersz jest pusty
+  var tr = (V.streets || []).map(abbr).join("-"), mt = $("mqt");
+  if (!tr) { mt._key = null; if (mt._anim) { mt._anim.cancel(); mt._anim = null; } mt.innerHTML = ""; }
+  else marquee(mt, "t|" + tr, function(){
+    var s = document.createElement("span"); s.className = "mi";
+    s.appendChild(document.createTextNode("TRASA: "));
+    var b = document.createElement("b"); b.textContent = tr; s.appendChild(b); return s;
+  });
+}
+
+function drawBody(){
+  var n = V.stops.length; if (!n) { $("bl").textContent = ""; $("bn").textContent = ""; $("bx").textContent = ""; $("bp").hidden = true; return; }
+  var s = V.stops[V.idx], nz = s.typ === "2";
+  var pl = V.atStop ? "PRZYSTANEK" : "NASTĘPNY PRZYSTANEK", en = V.atStop ? "CURRENT STOP" : "NEXT STOP";
+  $("bl").textContent = (EN ? en : pl) + (nz ? (EN ? " (ON REQUEST)" : " NA ŻĄDANIE") : "");
+  var bn = $("bn"); bn.textContent = s.name; bn.style.transform = "none";
+  var w = bn.scrollWidth; if (w > 1160) bn.style.transform = "scaleX(" + Math.max(.5, 1160 / w) + ")";
+  $("bx").textContent = "";
+  $("bp").hidden = false;
+  $("bp").firstElementChild.style.width = (n > 1 ? (V.idx + (V.atStop ? 0 : -0.5)) / (n - 1) * 100 : 100) + "%";
+  if (!V.atStop && V.idx === 0) $("bp").firstElementChild.style.width = "0";
+  if (V.prog != null) $("bp").firstElementChild.style.width = (V.prog * 100) + "%";      // z SIP
+}
+
+function clock(){
+  var d = new Date();
+  $("ct").textContent = d.getHours() + ":" + ("0" + d.getMinutes()).slice(-2);
+  $("cw").textContent = d.toLocaleDateString("pl-PL", { weekday:"long" });
+  $("cd").textContent = d.toLocaleDateString("pl-PL", { day:"numeric", month:"long", year:"numeric" });
+}
+
+function render(){
+  var clockView = $("view").value === "clock" || !V.stops.length;
+  $("hdr").hidden = clockView; $("clk").hidden = !clockView;
+  if (!clockView) drawHdr();
+  drawBody(); clock();
+}
+
+function onVariant(){
+  var vs = variantsOf(V.line), v = null;
+  for (var i = 0; i < vs.length; i++) if (vs[i].code === $("variant").value) v = vs[i];
+  if (!v) { V.stops = []; V.dest = ""; render(); return; }
+  V.stops = names(v); V.dest = v.headsign || V.stops[V.stops.length - 1].name; V.idx = 0; V.atStop = true;
+  V.streets = v.streets || []; V.prog = null;
+  var i0 = parseInt(P.get("idx"), 10); if (i0 >= 0 && i0 < V.stops.length) { V.idx = i0; P.delete("idx"); }
+  render(); sched();
+}
+function onLine(){
+  V.line = $("line").value.trim().toUpperCase();
+  var vs = variantsOf(V.line), sel = $("variant"); sel.innerHTML = "";
+  vs.forEach(function(v){
+    var o = document.createElement("option"); o.value = v.code;
+    var st = D.stops[v.stops[0][0]], en = D.stops[v.stops[v.stops.length - 1][0]];
+    o.textContent = v.code + ": " + (st ? st[0] : "?") + " → " + (en ? en[0] : "?") + " (" + v.stops.length + " przyst.)"; sel.appendChild(o);
+  });
+  if (P.get("var")) { sel.value = P.get("var"); P.delete("var"); }
+  setStatus(vs.length ? "" : "Nie ma linii " + V.line + " w danych" + (D === DEMO ? " demonstracyjnych (dostępna: 123). Z serwerem serve.py są wszystkie linie." : "."));
+  onVariant();
+}
+
+function step(dir){
+  if (SIPMODE) return;
+  var n = V.stops.length; if (!n) return;
+  if (dir > 0) { if (V.atStop) { if (V.idx < n - 1) { V.atStop = false; V.idx++; } else V.idx = 0; } else V.atStop = true; }
+  else { if (!V.atStop) { V.atStop = true; V.idx--; } else if (V.idx > 0) V.atStop = false; }
+  render();
+}
+function sched(){
+  clearTimeout(timer);
+  if (SIPMODE) return;
+  if ($("auto").checked) timer = setTimeout(function(){ step(1); sched(); }, V.atStop ? 3500 : 4500);
+}
+
+function fit(){
+  var kiosk = document.body.classList.contains("kiosk"), st = $("stage"), wrap = $("wrap");
+  var W = kiosk ? innerWidth : wrap.clientWidth, H = kiosk ? innerHeight : 1e9, k = Math.min(W / 1280, H / 720);
+  st.style.transform = "scale(" + k + ")";
+  if (kiosk) { st.style.left = ((innerWidth - 1280 * k) / 2) + "px"; st.style.top = ((innerHeight - 720 * k) / 2) + "px"; }
+  else { st.style.left = "0"; st.style.top = "0"; wrap.style.height = (720 * k) + "px"; }
+}
+
+// ---------- połączenie z SIP (sip-autobus.html publikuje stan w localStorage "sip_state") ----------
+function sipOn(){ try { return JSON.parse(localStorage.getItem("sip_state") || "null"); } catch(e){ return null; } }
+function refresh(){
+  if (!D) return;
+  var s = $("link").checked ? sipOn() : null;
+  SIPMODE = !!s;
+  ["line", "variant", "prev", "next", "auto"].forEach(function(id){ $(id).disabled = SIPMODE; });
+  if (!s) { onLine(); return; }
+  clearTimeout(timer);
+  if (s.standby || !s.stop) { V.stops = []; setStatus("Połączono z SIP: brak uruchomionej linii."); render(); return; }
+  V.line = s.line; V.dest = s.dest; V.streets = s.streets || [];
+  V.stops = [{ name:s.stop, typ:s.typ2 }]; V.idx = 0; V.atStop = !!s.atStop; V.prog = s.prog;
+  setStatus("Połączono z SIP: linia " + s.line + ((s.streets && s.streets.length) ? "." : ". Brak ulic (serwer nie zwrócił api/geo albo jeszcze się wczytują), więc wiersz TRASA jest pusty."));
+  render();
+}
+
+function load(){
+  if (!/^https?:$/.test(location.protocol)) return Promise.resolve(DEMO);
+  return fetch("gtfs/routes.json").then(function(r){ return r.ok ? r.json() : Promise.reject(); }).catch(function(){ return DEMO; });
+}
+
+function init(){
+  if (P.get("kiosk")) document.body.classList.add("kiosk");
+  if (P.get("auto") === "0") $("auto").checked = false;
+  if (P.get("short") === "1") $("short").checked = true;
+  if (P.get("view") === "clock") $("view").value = "clock";
+  if (P.get("line")) $("line").value = P.get("line");
+  fit(); clock();
+  load().then(function(d){
+    D = d;
+    var dl = $("lines"); Object.keys(D.routes || {}).sort(function(a, b){ return a.localeCompare(b, "pl", { numeric:true }); }).forEach(function(l){
+      var o = document.createElement("option"); o.value = l; dl.appendChild(o);
+    });
+    if (D === DEMO && !D.routes[$("line").value.trim().toUpperCase()]) $("line").value = "123";
+    refresh();
+  });
+  $("link").addEventListener("change", refresh);
+  window.addEventListener("storage", function(e){ if (e.key === "sip_state" || e.key === null) refresh(); });
+  $("line").addEventListener("change", onLine);
+  $("variant").addEventListener("change", onVariant);
+  $("view").addEventListener("change", render);
+  $("short").addEventListener("change", render);
+  $("prev").addEventListener("click", function(){ step(-1); sched(); });
+  $("next").addEventListener("click", function(){ step(1); sched(); });
+  $("auto").addEventListener("change", sched);
+  $("full").addEventListener("click", function(){ var w = $("wrap"); (w.requestFullscreen || function(){}).call(w); });
+  document.addEventListener("keydown", function(e){
+    var t = (e.target.tagName || "").toLowerCase(); if (t === "input" || t === "select") return;
+    if (e.key === "ArrowRight") { step(1); sched(); } else if (e.key === "ArrowLeft") { step(-1); sched(); }
+  });
+  document.addEventListener("fullscreenchange", function(){ setTimeout(fit, 50); });
+  window.addEventListener("resize", fit);
+  setInterval(clock, 10000);
+  if (ENON) setInterval(function(){ EN = !EN; drawBody(); }, 5000);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ $("mqd")._key = $("mqt")._key = null; render(); });
+}
+init();
+})();
+</script>
+</body>
+</html>
