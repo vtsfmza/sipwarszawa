@@ -1,0 +1,46 @@
+name: Publikacja na GitHub Pages
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * *"     # codziennie odświeża trasy z GTFS
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Zbuduj trasy z GTFS
+        run: |
+          mkdir -p _site/gtfs
+          curl -fsSL -A sip-autobus -o gtfs.zip https://mkuran.pl/gtfs/warsaw.zip
+          python - <<'PY'
+          import json, serve
+          d = serve.build_routes("gtfs.zip")
+          open("_site/gtfs/routes.json", "w", encoding="utf-8").write(json.dumps(d, ensure_ascii=False, separators=(",", ":")))
+          PY
+      - name: Złóż stronę
+        run: |
+          cp sip-autobus.html _site/index.html
+          cp sip-autobus.html _site/sip-autobus.html
+          cp -r Fonts _site/Fonts
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

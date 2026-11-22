@@ -353,7 +353,7 @@ function loadStatic(){
   S.key = key;
   try { if ($("saveKey").checked && key) localStorage.setItem("sip_key", key); else if (!$("saveKey").checked) localStorage.removeItem("sip_key"); } catch(e){}
   var b = $("loadStatic"); b.disabled = true; setStatus("st1", "Pobieranie tras i przystanków (pierwsze uruchomienie serwera może potrwać około minuty)…");
-  var url = "/gtfs/routes.json";
+  var url = "gtfs/routes.json";
   return fetch(url).then(function(r){
     if (!r.ok) return r.text().then(function(t){
       var m = ""; try { m = JSON.parse(t).error || ""; } catch(e){}
@@ -807,6 +807,7 @@ function fitStage(){
   if (CONFIG.key && !$("apiKey").value) { $("apiKey").value = CONFIG.key; $("saveKey").checked = true; }
   ["line"].forEach(function(f){ if (CONFIG[f] && !P.get(f)) $(f).value = CONFIG[f]; });
   if (CONFIG.live && !P.has("live")) P.set("live", "1");
+  if (P.get("api")) CONFIG.api = P.get("api").replace(/\/?$/, "/");
   if (CONFIG.brig && !P.get("brig")) P.set("brig", CONFIG.brig);
   if (CONFIG.key || CONFIG.live) { if (!P.has("kiosk") && CONFIG.live) P.set("kiosk", "1"); }
   if (P.get("kiosk")) document.body.classList.add("kiosk");
