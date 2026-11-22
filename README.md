@@ -23,8 +23,10 @@ Trasa, kropki, strzałka i nazwa przystanku są fioletowe (jak na prawdziwych wy
 
 ## Strefy biletowe i długie trasy
 - Strefy czytane są z kolumny `zone_id` w GTFS (1, 2 oraz 1+2 na granicy; po zmianie `serve.py` usuń `gtfs-cache.json`, żeby cache zbudował się z kolumną stref). Tylko linie, które wyjeżdżają poza strefę 1, mają pasek „strefa 2” / „strefa 1” pod trasą oraz czerwoną etykietę „granica strefy biletowej” przy przystanku granicznym (ta sama etykieta pojawia się w nagłówku, gdy to bieżący przystanek, a nazwa granicy jest też w panelu pod ekranem). Linie tylko w strefie 1 nie mają żadnych oznaczeń stref.
-- Zbyt długa trasa nie zmienia skali: pierwszy przystanek zostaje po lewej, przejechany odcinek zwija się w szary pasek „>>>”, a gdy reszta się nie mieści, zwija się też koniec (fioletowy pasek przed przystankiem końcowym). Gdy cała trasa mieści się bez nakładania, paski znikają.
-- Zbyt długa nazwa bieżącego przystanku w nagłówku ma stałą wielkość pisma i przesuwa się od prawej do lewej. Zbyt długa nazwa przy przystanku na schemacie też zachowuje rozmiar, a jej części co 2,6 s wjeżdżają od góry w dół (jedno słowo dłuższe niż miejsce jest ściskane).
+- Zbyt długa trasa: pierwszy przystanek zostaje po lewej, a przejechany odcinek zwija się w szary pasek „>>>” zawsze z tyłu. Z przodu (przed przystankiem końcowym) takiego paska nie ma: gdy reszta trasy się nie mieści, zmniejsza się tylko rozstaw przystanków. Gdy cała trasa mieści się bez nakładania, pasek znika.
+- Minuty na schemacie liczone są od bieżącego przystanku: aktualny ma 0', kolejne rosną, a przystanki miniete nie mają już minut.
+- Czerwony pasek pokazuje wyłącznie miasto (poza Warszawą) albo dzielnicę Warszawy, nic innego.
+- Zbyt długa nazwa bieżącego przystanku w nagłówku ma stałą wielkość pisma i przesuwa się od prawej do lewej. Tak samo nazwa przy przystanku na schemacie: nic się nie skraca ani nie ściska, a przesuwają się od prawej do lewej tylko te nazwy, które się nie mieszczą.
 - Przedrostek miejscowości jest obcinany tylko przy spacji („Ząbki Maczka” → „Maczka”); nazwy z łącznikiem („Sowia Wola-Szkoła”) zostają w całości.
 
 ## Zapowiedzi głosowe
