@@ -569,9 +569,13 @@ function transfersAt(s, line){
   Object.keys(set).filter(function(x){ return x.toUpperCase() !== L && !/^N\d/i.test(x); })   // linie N nie występują w przesiadkach: ani dla linii dziennych, ani nocnych
     .sort(function(a, b){ return a.localeCompare(b, "pl", { numeric:true }); })
     .forEach(function(l){ var t = /^\d{1,2}$/.test(l) ? "tram" : /^M\d/i.test(l) ? "metro" : ((S.ltype && S.ltype[l]) || "bus"); (g[t] || g.bus).push(l); });
-  var left = 10, out = [];
-  ["metro", "tram", "bus"].forEach(function(t){
-    var ls = g[t].slice(0, Math.max(0, left)); left -= ls.length;
+  // limit linii w nagłówku (12), ale każda grupa ma gwarantowane miejsce (min. 4), żeby tramwaje nie wypychały autobusów ani metra
+  var kinds = ["metro", "tram", "bus"], cap = {}, used = 0, out = [];
+  kinds.forEach(function(t){ cap[t] = Math.min(g[t].length, 4); used += cap[t]; });
+  var spare = Math.max(0, 12 - used);
+  kinds.forEach(function(t){ var add = Math.min(spare, g[t].length - cap[t]); cap[t] += add; spare -= add; });
+  kinds.forEach(function(t){                                          // kolejność: najpierw metro, potem tramwaje, na końcu autobusy
+    var ls = g[t].slice(0, cap[t]);
     if (ls.length) out.push({ type:t, lines:ls.join(" ") });
   });
   return out;
