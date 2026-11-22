@@ -653,6 +653,7 @@ function drawHdr(v){
   h.style.transform = "none";
   h.innerHTML = '<span class="lab"></span><span class="nm"></span>' + (gz ? '<span class="hz">granica strefy biletowej</span>' : "") + (tr.length ? arrowSvg(nz, LC) + transHtml(tr) : "");
   h.children[0].textContent = hdrLabel(v, nz);
+  h.children[0].style.color = v.atStop ? LC : "";                    // na przystanku etykieta w kolorze linii, przy „następny przystanek” szara
   var nm = h.children[1]; nm.textContent = s.name; nm.style.color = LC;
   var w = h.scrollWidth;
   if (w > 1190) {
