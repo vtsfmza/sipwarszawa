@@ -142,7 +142,7 @@ def _stop_coords():
 
 def geo_lookup(ids):
     """Zwraca ({id: {street, district}}, liczba_oczekujacych); brakujace przystanki trafiaja do kolejki."""
-    out, pending = {}, 0
+    out, pending, wanted = {}, 0, []
     db = _db()
     try:
         coords = None
@@ -152,6 +152,7 @@ def geo_lookup(ids):
                 out[sid] = {"street": row[0] or "", "district": row[1] or ""}
                 continue
             pending += 1
+            wanted.append(sid)
             with _geo_lock:
                 if sid not in _geo_ids:
                     if coords is None:
@@ -160,6 +161,12 @@ def geo_lookup(ids):
                         _geo_ids.add(sid); _geo_queue.append((sid, coords[sid][1], coords[sid][2]))
     finally:
         db.close()
+    if wanted:
+        # przystanki z najnowszego zapytania (ostatnio otwarta linia) idą na początek kolejki, w kolejności trasy;
+        # sortowanie jest stabilne, więc reszta zachowuje dotychczasową kolejność
+        order = {sid: n for n, sid in enumerate(wanted)}
+        with _geo_lock:
+            _geo_queue.sort(key=lambda it: order.get(it[0], len(order)))
     return out, pending
 
 def _geo_worker():

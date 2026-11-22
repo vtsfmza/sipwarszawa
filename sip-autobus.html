@@ -446,7 +446,7 @@ function fetchGeo(stops){
     var changed = false;
     stops.forEach(function(s){ var g = j.geo && j.geo[s.id]; if (g && (s.street !== (g.street || "") || s.dz !== (g.district || ""))) { s.street = g.street || ""; s.dz = g.district || ""; changed = true; } });
     if (changed) render();
-    if (j.pending > 0 && ++geoTries < 400) geoTimer = setTimeout(function(){ fetchGeo(stops); }, 4000);
+    if (j.pending > 0 && ++geoTries < 1000) geoTimer = setTimeout(function(){ fetchGeo(stops); }, 1500);
     setStatus("st2", j.pending > 0 ? "Ulice i dzielnice: jeszcze " + j.pending + " przystanków do sprawdzenia…" : "Ulice i dzielnice wczytane.", j.pending > 0 ? "" : "ok");
   }).catch(function(){});
 }
@@ -505,7 +505,7 @@ function transfersAt(s, line){
 // Nagłówek zmienia język co 5 s (PL <-> EN), jak na wyświetlaczach w autobusach. Wyłączenie: ?en=0
 var HDR_EN = false, HDR_EN_ON = !/[?&]en=0(&|$)/.test(location.search);
 function hdrLabel(v, nz){
-  if (HDR_EN) return (v.atStop ? "CURRENT STOP" : "THE NEXT STOP IS") + (nz ? " (ON REQUEST)" : "") + ":";
+  if (HDR_EN) return (v.atStop ? "CURRENT STOP" : "NEXT STOP") + (nz ? " (ON REQUEST)" : "") + ":";
   return (v.atStop ? "PRZYSTANEK" : "NASTĘPNY PRZYSTANEK") + (nz ? " NA ŻĄDANIE" : "") + ":";
 }
 setInterval(function(){
