@@ -55,6 +55,7 @@ h1{margin:0;font-size:20px;font-weight:700}
 #diag .nm.cur{color:var(--lc,#000)!important;font-weight:700!important}
 #diag .bar{position:absolute;background:#d3232f}
 #diag .gap{position:absolute;width:2px;background:#fff}
+#diag .nm img{height:1.25em;vertical-align:middle;margin-left:5px}
 #diag .dz{position:absolute;color:#fff;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden}
 #diag .strip{position:absolute;background:rgba(255,255,255,.92)}
 #diag .tick{position:absolute;width:1px;background:#8a8a8a}
@@ -306,36 +307,12 @@ function api(action, params){
 }
 
 // ---------- Trasy ----------
-function streetName(id){
-  var m = S.streets; if (!m || id == null) return "";
-  var v = m[id]; if (v == null) v = m[String(+id)]; if (v == null) v = m[pad(id, 4)];
-  if (v && typeof v === "object") v = v.nazwa || v.name || v.nazwa_ulicy || "";
-  return v ? cleanName(v) : "";
-}
-// słownik API nie ma stałej nazwy pola z ulicami: szukamy tego, w którym są identyfikatory ulic z tras
-function pickStreets(dict, routes){
-  var ids = {}, cnt = 0;
-  outer: for (var l in routes) for (var c in routes[l]) for (var k in routes[l][c]) {
-    var u = routes[l][c][k].ulica_id; if (u != null) ids[String(u)] = 1; if (++cnt > 300) break outer;
-  }
-  var best = null, bestHit = 0;
-  Object.keys(dict || {}).forEach(function(key){
-    if (key === "zespoly_przystankowe") return;
-    var o = dict[key]; if (!o || typeof o !== "object") return;
-    var hit = 0; Object.keys(ids).forEach(function(id){ if (o[id] != null || o[String(+id)] != null) hit++; });
-    if (hit > bestHit) { best = key; bestHit = hit; }
-  });
-  return best ? dict[best] : {};
-}
-function buildStops(obj){
-  return Object.keys(obj).sort(function(a, b){ return a - b; }).map(function(k){
-    var s = obj[k], z = pad(s.nr_zespolu, 4), nr = pad(s.nr_przystanku, 2), id = z + nr;
-    var c = S.coords.get(id);
-    return {
-      id:id, z:z, typ:String(s.typ), street: streetName(s.ulica_id),
-      name: cleanName(S.names[z] || S.names[String(s.nr_zespolu)] || ("Przystanek " + z)),
-      lat: c ? c[0] : null, lon: c ? c[1] : null
-    };
+function nameKey(n){ return cleanName(n).toLowerCase(); }
+function buildStops(arr){
+  return arr.map(function(o){
+    var id = o.id, c = S.coords.get(id), nm = cleanName(S.names[id] || ("Przystanek " + id));
+    return { id:id, z:nameKey(nm), typ:String(o.typ), wc:o.wc || "", street:"", dz:"", name:nm,
+             lat: c ? c[0] : null, lon: c ? c[1] : null };
   });
 }
 function variantsOf(line){
@@ -362,23 +339,25 @@ function loadStatic(){
     return r.json();
   }).then(function(d){
     if (!d || !d.routes) throw new Error("Nieoczekiwana odpowiedź z /gtfs/routes.json.");
-    var routes = {}, names = {}, zl = {}, coords = new Map();
+    var routes = {}, names = {}, zl = {}, coords = new Map(), wcs = {};
     Object.keys(d.stops || {}).forEach(function(id){
-      if (!/^\d{6}$/.test(id)) return;
-      var st = d.stops[id]; names[id.slice(0, 4)] = st[0]; coords.set(id, [st[1], st[2]]);
+      var st = d.stops[id]; names[id] = st[0]; coords.set(id, [st[1], st[2]]);
+      if (st[3] === "2") wcs[id] = "none"; else if (st[3] === "p") wcs[id] = "partial";
     });
     Object.keys(d.routes).forEach(function(l){
       d.routes[l].forEach(function(v){
-        var o = {}, n = 0;
+        var o = [];
         v.stops.forEach(function(st){
-          if (!/^\d{6}$/.test(st[0])) return;
-          n++; o[n] = { nr_zespolu:st[0].slice(0, 4), nr_przystanku:st[0].slice(4), typ:st[1], ulica_id:null };
-          (zl[st[0].slice(0, 4)] = zl[st[0].slice(0, 4)] || {})[l] = 1;
+          if (!names[st[0]]) return;
+          o.push({ id:st[0], typ:st[1], wc:wcs[st[0]] || "" });
+          var z = nameKey(names[st[0]]);
+          (zl[z] = zl[z] || {})[l] = 1;
         });
-        if (n) (routes[l] = routes[l] || {})[v.code] = o;
+        if (o.length) (routes[l] = routes[l] || {})[v.code] = o;
       });
     });
-    S.routes = routes; S.names = names; S.zl = zl; S.streets = {};
+    if (!Object.keys(routes).length) throw new Error("Serwer zwrócił trasy, ale bez rozpoznanych przystanków (sprawdź gtfs-cache.json i usuń go, jeśli jest stary).");
+    S.routes = routes; S.names = names; S.zl = zl;
     coords.forEach(function(v, k){ S.coords.set(k, v); });
     S.cache.clear();
     var dl = $("lines"); dl.innerHTML = "";
@@ -386,8 +365,8 @@ function loadStatic(){
       var o = document.createElement("option"); o.value = l; dl.appendChild(o);
     });
     setStatus("st4", "Współrzędne z GTFS: " + S.coords.size + " przystanków.", "ok");
-    setStatus("st1", "Wczytano " + Object.keys(S.routes).length + " linii i " + Object.keys(S.names).length + " zespołów przystankowych (GTFS ZTM" +
-      (d.built ? ", stan z " + new Date(d.built * 1000).toLocaleDateString("pl-PL") : "") + "). Nazwy ulic nie są już dostępne w danych.", "ok");
+    setStatus("st1", "Wczytano " + Object.keys(S.routes).length + " linii i " + Object.keys(S.names).length + " przystanków (GTFS ZTM" +
+      (d.built ? ", stan z " + new Date(d.built * 1000).toLocaleDateString("pl-PL") : "") + "). Ulice i dzielnice dociągają się z OpenStreetMap w tle.", "ok");
     onLine();
   }).catch(function(e){
     var msg = e.message;
@@ -424,7 +403,7 @@ function onLine(){
   setStatus("st2", "Wariantów trasy: " + vs.length + ".");
   onVariant();
 }
-function onVariant(){
+function onVariant(){ geoTries = 0;
   if ($("mode_live").checked) { applyLiveInfoOnly(); return; }
   var v = currentVariant();
   if (v) startSim(v.stops, $("line").value.trim());
@@ -433,7 +412,23 @@ function onVariant(){
 // ---------- Symulacja ----------
 function startSim(stops, line){
   S.view = { mode:"run", stops:stops, idx:0, atStop:true, line:line, type:typeFor(line) };
-  render(); schedSim();
+  render(); schedSim(); fetchGeo(stops);
+}
+// ulice i dzielnice: serwer (serve.py) pyta OpenStreetMap w tle i zapamiętuje wyniki; tu dopytujemy do skutku
+var geoTimer = null, geoTries = 0;
+function fetchGeo(stops){
+  clearTimeout(geoTimer);
+  if (!S.routes || !/^https?:$/.test(location.protocol)) return;
+  var ids = stops.filter(function(s){ return s.lat != null; }).map(function(s){ return s.id; });
+  if (!ids.length) return;
+  fetch("api/geo?ids=" + encodeURIComponent(ids.join(","))).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+    if (!j || S.view.stops !== stops) return;
+    var changed = false;
+    stops.forEach(function(s){ var g = j.geo && j.geo[s.id]; if (g && (s.street !== (g.street || "") || s.dz !== (g.district || ""))) { s.street = g.street || ""; s.dz = g.district || ""; changed = true; } });
+    if (changed) render();
+    if (j.pending > 0 && ++geoTries < 400) geoTimer = setTimeout(function(){ fetchGeo(stops); }, 4000);
+    setStatus("st2", j.pending > 0 ? "Ulice i dzielnice: jeszcze " + j.pending + " przystanków do sprawdzenia…" : "Ulice i dzielnice wczytane.", j.pending > 0 ? "" : "ok");
+  }).catch(function(){});
 }
 function stepSim(dir){
   var v = S.view; if (v.mode !== "run") return;
@@ -556,6 +551,7 @@ function drawDiag(v, T){
     var nm = box("nm" + (passed ? " past" : "") + (end && !passed ? " end" : "") + (i === cur ? " cur" : ""), x - 3 + (bh / 2) * Math.sin(rad), Y - 11 - bh, 0, bh);
     nm.style.width = "auto"; nm.style.lineHeight = bh + "px"; nm.style.fontSize = f + "px";
     nm.textContent = s.name + (nz ? " (Ż)" : "");
+    if (s.wc) { var im = document.createElement("img"); im.src = "img/wheelchair_" + s.wc + ".png"; im.alt = ""; nm.appendChild(im); }
     if (t > 0.3 && !passed) nm.style.fontWeight = 600;
     var room = Math.min((1905 - x) / Math.cos(rad), (Y - 11 - 105) / Math.sin(rad)), maxW = Math.max(60, Math.min(300, room)), tf = "rotate(-" + ang + "deg)";
     if (nm.scrollWidth > maxW) {
@@ -610,7 +606,7 @@ function ingestStops(text){
   for (var i = 1; i < lines.length; i++) {
     if (!lines[i]) continue;
     var c = parseCsvLine(lines[i]), id = c[iId];
-    if (/^\d{6}$/.test(id)) { var la = parseFloat(c[iLa]), lo = parseFloat(c[iLo]); if (isFinite(la) && isFinite(lo)) { S.coords.set(id, [la, lo]); saved.push(id + "," + la + "," + lo); } }
+    if (id) { var la = parseFloat(c[iLa]), lo = parseFloat(c[iLo]); if (isFinite(la) && isFinite(lo)) { S.coords.set(id, [la, lo]); saved.push(id + "," + la + "," + lo); } }
   }
   S.cache.clear();
   try { localStorage.setItem("sip_coords", saved.join(";")); } catch(e){}

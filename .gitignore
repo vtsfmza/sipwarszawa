@@ -1,2 +1,3 @@
 gtfs-cache.json
 __pycache__/
+geo_cache.sqlite*

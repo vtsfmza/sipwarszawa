@@ -11,7 +11,7 @@ Kiosk:         http://localhost:8000/sip-autobus.html?kiosk=1&line=197&live=1&br
 Trasy i przystanki serwer buduje z GTFS (mkuran.pl/gtfs/warsaw.zip), bo stare API tras (api.um.warszawa.pl)
 zostalo wylaczone. Wynik jest cache'owany w pliku gtfs-cache.json (odswiezany co 24 h).
 """
-import os, sys, io, csv, json, time, zipfile, tempfile, threading, urllib.request, urllib.error
+import os, sys, io, csv, json, time, zipfile, tempfile, threading, sqlite3, urllib.parse, urllib.request, urllib.error
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 UPSTREAMS = [u.strip().rstrip("/") for u in os.environ.get(
@@ -40,7 +40,7 @@ def build_routes(zip_path):
         stops = {}
         for s in _rows(zf, "stops.txt"):
             try:
-                stops[s["stop_id"]] = [s.get("stop_name", ""), round(float(s["stop_lat"]), 6), round(float(s["stop_lon"]), 6)]
+                stops[s["stop_id"]] = [s.get("stop_name", ""), round(float(s["stop_lat"]), 6), round(float(s["stop_lon"]), 6), s.get("wheelchair_boarding", "")]
             except (ValueError, KeyError):
                 pass
         seqs = {}                         # (linia, kierunek) -> {(sekwencja): [licznik, headsign]}
@@ -112,6 +112,80 @@ def get_routes_json():
             except OSError:
                 pass
 
+# ---------- ulice i dzielnice z OpenStreetMap (Nominatim), cache w geo_cache.sqlite ----------
+# Nominatim pozwala na max 1 zapytanie/s i wymaga rozpoznawalnego User-Agent (ustaw SIP_CONTACT=twoj@mail).
+GEOCODER = os.environ.get("SIP_GEOCODER", "https://nominatim.openstreetmap.org/reverse")
+GEO_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "geo_cache.sqlite")
+DISTRICT_KEYS = ("suburb", "city_district", "borough", "quarter", "neighbourhood")
+STREET_KEYS = ("road", "pedestrian", "footway", "path", "cycleway")
+_geo_queue, _geo_lock = [], threading.Lock()
+_geo_ids = set()
+
+def _db():
+    c = sqlite3.connect(GEO_DB, timeout=30)
+    c.execute("CREATE TABLE IF NOT EXISTS geo (id TEXT PRIMARY KEY, street TEXT, district TEXT)")
+    return c
+
+def _stop_coords():
+    try:
+        with open(CACHE, "rb") as f:
+            return json.loads(f.read().decode("utf-8")).get("stops", {})
+    except (OSError, ValueError):
+        return {}
+
+def geo_lookup(ids):
+    """Zwraca ({id: {street, district}}, liczba_oczekujacych); brakujace przystanki trafiaja do kolejki."""
+    out, pending = {}, 0
+    db = _db()
+    try:
+        coords = None
+        for sid in ids:
+            row = db.execute("SELECT street, district FROM geo WHERE id=?", (sid,)).fetchone()
+            if row:
+                out[sid] = {"street": row[0] or "", "district": row[1] or ""}
+                continue
+            pending += 1
+            with _geo_lock:
+                if sid not in _geo_ids:
+                    if coords is None:
+                        coords = _stop_coords()
+                    if sid in coords:
+                        _geo_ids.add(sid); _geo_queue.append((sid, coords[sid][1], coords[sid][2]))
+    finally:
+        db.close()
+    return out, pending
+
+def _geo_worker():
+    contact = os.environ.get("SIP_CONTACT", "")
+    ua = "sip-autobus/1.0 (%s)" % (contact or "https://github.com/vtsfmza/sipwarszawa")
+    while True:
+        with _geo_lock:
+            item = _geo_queue.pop(0) if _geo_queue else None
+        if not item:
+            time.sleep(1); continue
+        sid, lat, lon = item
+        street = district = ""
+        ok = True
+        try:
+            q = urllib.parse.urlencode({"format": "jsonv2", "lat": lat, "lon": lon, "zoom": 18, "addressdetails": 1, "accept-language": "pl"})
+            sep = "&" if "?" in GEOCODER else "?"
+            with urllib.request.urlopen(urllib.request.Request(GEOCODER + sep + q, headers={"User-Agent": ua}), timeout=20) as r:
+                a = json.loads(r.read().decode("utf-8")).get("address", {})
+            street = next((a[k] for k in STREET_KEYS if a.get(k)), "")
+            district = next((a[k] for k in DISTRICT_KEYS if a.get(k)), "")
+        except Exception as e:
+            ok = False
+            print("Nominatim: %s (przystanek %s) - sprobuje ponownie pozniej" % (e, sid), flush=True)
+        if ok:
+            db = _db()
+            try:
+                db.execute("INSERT OR REPLACE INTO geo VALUES (?,?,?)", (sid, street, district)); db.commit()
+            finally:
+                db.close()
+        with _geo_lock:
+            _geo_ids.discard(sid)
+        time.sleep(1.1 if ok else 10)
+
 class Handler(SimpleHTTPRequestHandler):
     def _proxy(self, method):
         body = None
@@ -147,6 +221,10 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        if self.path.split("?")[0] == "/api/geo":
+            ids = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("ids", [""])[0].split(",")
+            geo, pending = geo_lookup([i for i in ids if i][:200])
+            return self._send(200, json.dumps({"geo": geo, "pending": pending}, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
         if self.path.startswith("/api/"):
             return self._proxy("GET")
         if self.path.split("?")[0] == "/gtfs/routes.json":
@@ -175,4 +253,5 @@ if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
     print("SIP: http://localhost:%d/sip-autobus.html   (API przez: %s)" % (port, ", ".join(UPSTREAMS)))
+    threading.Thread(target=_geo_worker, daemon=True).start()
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
