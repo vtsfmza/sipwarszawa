@@ -153,10 +153,14 @@ button{padding:4px 10px}
 #diag .gw{position:absolute;transform-origin:0 100%;white-space:nowrap}
 #diag .gw .gz{position:absolute;top:0;background:#d3232f;color:#fff;font-weight:700;border-radius:2px;padding:0 4px;white-space:nowrap;transform-origin:0 50%}
 #hdr .trw{display:flex;align-items:center;height:62px;overflow:hidden;margin-left:12px;align-self:center;flex:none}
-#hdr .tri{display:block;line-height:1.12;font-size:19px;color:#444;font-weight:400;white-space:normal;max-width:100%}
+#hdr .tri{display:flex;align-items:center;width:100%;line-height:1.12;font-size:19px;color:#444;font-weight:400;white-space:normal;max-width:100%}
+#hdr .tg{display:flex;align-items:center;flex:1 1 auto;min-width:0}
+#hdr .tg + .tg{margin-left:.9em}
+#hdr .tg .ti2{flex:none;margin:0 .4em 0 0}
+#hdr .tg .tl{min-width:0}
 #hdr .ti2{position:static;display:inline-block;width:1.25em;height:1.25em;vertical-align:-.25em;margin:0 .3em 0 .7em}
 #hdr .tl{white-space:normal}
-#hdr .hz{align-self:center;margin-left:16px;background:#d3232f;color:#fff;font-size:20px;font-weight:700;line-height:1;padding:5px 10px;border-radius:3px}
+#hdr .hz{display:inline-block;vertical-align:middle;margin-left:16px;background:#d3232f;color:#fff;font-size:20px;font-weight:700;line-height:1;padding:5px 10px;border-radius:3px}
 #hdr .nmw{position:relative;display:inline-block;overflow:hidden;height:62px;align-self:center}
 #hdr .nmp{position:absolute;left:0;top:0;white-space:nowrap;font-size:46px;font-weight:700;line-height:62px}
 #diag .nsw{position:relative;display:inline-block;overflow:hidden;vertical-align:top}
@@ -568,7 +572,7 @@ function arrowSvg(nz, c){
     '<path d="M26 15H68M58 6l10 9-10 9" fill="none" stroke="'+c+'" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
 function transHtml(tr){                                              // wszystkie przesiadki w bloku: zawija się do kilku wierszy, a czcionka maleje tak, by zmieścić wszystkie linie
-  return '<span class="trw"><span class="tri">' + tr.map(function(g){ return '<img class="ti2" src="img/' + g.type + '.png" alt=""><span class="tl">' + g.lines + '</span>'; }).join(" ") + '</span></span>';
+  return '<span class="trw"><span class="tri">' + tr.map(function(g){ return '<span class="tg" style="flex-grow:' + g.lines.split(" ").length + '"><img class="ti2" src="img/' + g.type + '.png" alt=""><span class="tl">' + g.lines + '</span></span>'; }).join("") + '</span></span>';
 }
 function fitTrans(blk, wpx){
   blk.style.width = Math.round(wpx) + "px";
@@ -633,7 +637,7 @@ var HN = { key:"", t:0 };
 function hdrMarquee(h, nm, avail, color){
   var tw = nm.offsetWidth, win = document.createElement("span"), inner = document.createElement("span");
   win.className = "nmw"; win.style.width = Math.round(avail) + "px";
-  inner.className = "nmp"; inner.textContent = nm.textContent; inner.style.color = color;
+  inner.className = "nmp"; inner.innerHTML = nm.innerHTML; inner.style.color = color;
   win.appendChild(inner); h.replaceChild(win, nm);
   var dur = (avail + tw) / 90 * 1000;                                 // ok. 90 px/s
   if (inner.animate) {
@@ -645,10 +649,11 @@ function drawHdr(v){
   var s = v.stops[v.idx], nz = s.typ === "2", h = $("hdr"), tr = transfersAt(s, v.line), LC = (TYPES[v.type] || TYPES.zwykla).dot;
   var ZI = zoneOf(v.stops), gz = !!(ZI && ZI.bd[v.idx]);
   h.style.transform = "none";
-  h.innerHTML = '<span class="lab"></span><span class="nm"></span>' + (gz ? '<span class="hz">granica strefy biletowej</span>' : "") + (tr.length ? arrowSvg(nz, LC) + transHtml(tr) : "");
+  h.innerHTML = '<span class="lab"></span><span class="nm"></span>' + (tr.length ? arrowSvg(nz, LC) + transHtml(tr) : "");
   h.children[0].textContent = hdrLabel(v, nz);
   h.children[0].style.color = v.atStop ? LC : "";                    // na przystanku etykieta w kolorze linii, przy „następny przystanek” szara
   var nm = h.children[1]; nm.textContent = s.name; nm.style.color = LC;
+  if (gz) { var hzb = document.createElement("span"); hzb.className = "hz"; hzb.textContent = "granica strefy biletowej"; nm.appendChild(hzb); }   // wewnątrz nazwy, więc przy przewijaniu jedzie razem z nią
   var blk = h.querySelector(".trw"), TW = 440;
   if (blk) fitTrans(blk, TW);
   var w = h.scrollWidth;
@@ -718,6 +723,8 @@ function announce(v){
     if (nz) add(vSnd("Przystanek na Żądanie (WTP)"));
   }
   if (!last && KB_MAIN.test(String(s.full || s.name))) add(vSnd("Możliwa Kontrola Biletów (WTP)"));   // tylko na głównych przystankach (lista KB_MAIN)
+  var ZI = zoneOf(v.stops);
+  if (v.atStop && ZI && ZI.bd[v.idx]) add(vSnd("Granica Strefy Biletowej (WTP)"));   // przystanek graniczny: zapowiedź na samym końcu
   if (miss.length) console.warn("Brak nagrania nazwy przystanku:", miss.join(", "));
   VOICE.queue = q;
   if (!q.length) { voiceStatus("Brak nagrań dla tego przystanku w banku zapowiedzi.", true); return; }
