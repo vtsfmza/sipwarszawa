@@ -30,3 +30,6 @@ Tryb kiosku: Chrome blokuje dźwięk bez kliknięcia, więc uruchom go z `--auto
 `sip-metro.html` to osobny ekran w stylu wagonu warszawskiego metra (1280×800, tło `img/metro-bg.png`). Działa bez serwera: wystarczy otworzyć plik (albo przez `serve.py`: http://localhost:8000/sip-metro.html).
 Parametry: `?line=M1|M2`, `dir=1|-1` (kierunek), `idx=N` (stacja startowa), `auto=0` (bez automatycznego przesuwania), `kiosk=1` (pełny ekran bez panelu), `en=0` (bez zmiany etykiety na angielską co 5 s).
 Dane M1 (stacje, minuty, dzielnice) pochodzą z ekranu w wagonie; **dane M2 są przybliżone** (czasy i dzielnice do sprawdzenia). Dane stacji są na początku skryptu w obiekcie `LINES`. Minuty liczone są od bieżącej pozycji; stacje miniętę są szare. Przesiadka M1↔M2 na Świętokrzyskiej jest oznaczona plakietką. Zapowiedzi głosowych w metrze nie ma.
+
+## Czcionki
+Oryginalne pliki Frutiger w `Fonts/` mają zepsute kodowanie (symbolowe) i nie zawierają polskich liter ą ć ę ń ś ź ż, przez co przeglądarka podstawiała inną czcionkę w środku słowa. Skrypt `tools/fix_fonts.py` (wymaga `pip install fonttools`) tworzy poprawione kopie w `Fonts/pl/` z dorobionymi polskimi literami, a strona używa właśnie ich.
