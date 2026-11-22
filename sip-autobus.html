@@ -151,7 +151,7 @@ button{padding:4px 10px}
 #diag .cb{border-radius:999px}
 #diag .cb svg{display:block}
 #diag .gw{position:absolute;transform-origin:0 100%;white-space:nowrap}
-#diag .gw .gz{position:absolute;top:0;background:#d3232f;color:#fff;font-weight:700;border-radius:3px;padding:0 8px;white-space:nowrap;transform-origin:0 50%}
+#diag .nm .gz{display:inline-block;margin-left:8px;background:#d3232f;color:#fff;border-radius:3px;padding:0 8px;line-height:inherit;white-space:nowrap}
 #hdr .trw{display:flex;align-items:center;height:62px;overflow:hidden;margin-left:12px;align-self:center;flex:none}
 #hdr .tri{display:flex;align-items:center;width:100%;line-height:1.12;font-size:19px;color:#444;font-weight:400;white-space:normal;max-width:100%}
 #hdr .tg{display:flex;align-items:center;flex:1 1 auto;min-width:0}
@@ -812,7 +812,7 @@ function drawDiag(v, T){
   var ZI = zoneOf(v.stops), k = 1 + 0.12 * t, Y = 299 + 28 * t, ZH = ZI ? Math.round(13 * k) : 0;
   var STRIP_Y = Y + 11, MBOT = Y + 33, BAR_Y = MBOT + ZH, BAR_H = Math.round(24 * k), ye = BAR_Y + BAR_H;
   var font = 1.22 * (sp <= 48 ? 13.8 + 4 * Math.max(0, sp - 32) / 16 : 17.8 - 2.8 * Math.min(1, (sp - 48) / 131));
-  var ang = Math.max(45, Math.min(78, Math.asin(Math.min(1, font * 1.42 / Math.max(sp, 1))) * 180 / Math.PI));   // gęsta trasa: bardziej strome nazwy, żeby sąsiednie się nie nakładały
+  var ang = Math.max(45, Math.min(75, Math.asin(Math.min(1, font * 1.2 / Math.max(sp, 1))) * 180 / Math.PI));
   var rad = ang * Math.PI / 180;
   function vis(i){ return i === 0 || i === n - 1 || (i >= aV && i <= bV); }
   function xOf(i){                                                // ukryte przystanki leżą wewnątrz zwiniętego paska
@@ -893,13 +893,14 @@ function drawDiag(v, T){
     var nm = box("nm" + (passed ? " past" : "") + (end && !passed ? " end" : "") + (i === cur ? " cur" : ""), x - 3 + (bh / 2) * Math.sin(rad), Y - 11 - bh, 0, bh);
     nm.style.width = "auto"; nm.style.lineHeight = bh + "px"; nm.style.fontSize = f + "px";
     var tn = document.createElement("span"); tn.className = "tn"; tn.textContent = s.name; nm.appendChild(tn);
+    if (ZI && ZI.bd[i]) { var gt = document.createElement("span"); gt.className = "gz"; gt.textContent = "granica strefy biletowej"; tn.appendChild(gt); }   // wewnątrz nazwy: jedzie z nią, także przy przewijaniu
     if (s.wc) { var im = document.createElement("img"); im.src = "img/wheelchair_" + s.wc + ".png"; im.alt = ""; nm.appendChild(im); }
     if (t > 0.3 && !passed) nm.style.fontWeight = 600;
     var room = Math.min((1905 - x) / Math.cos(rad), (Y - 11 - 105) / Math.sin(rad)), maxW = Math.max(60, Math.min(300, room)), tf = "rotate(-" + ang + "deg)";
     if (nm.scrollWidth > maxW) {                                    // tylko nazwa, która wychodzi poza miejsce: rozmiar bez zmian (nic nie skracamy), nazwa przesuwa się od prawej do lewej
       var tw = tn.offsetWidth, avail = Math.max(60, maxW - (nm.scrollWidth - tw));
       var nwin = document.createElement("span"); nwin.className = "nsw"; nwin.style.width = Math.round(avail) + "px"; nwin.style.height = bh + "px";
-      var ninn = document.createElement("span"); ninn.className = "nsp"; ninn.textContent = s.name; nwin.appendChild(ninn);
+      var ninn = document.createElement("span"); ninn.className = "nsp"; ninn.innerHTML = tn.innerHTML; nwin.appendChild(ninn);
       nm.replaceChild(nwin, tn);
       if (ninn.animate) {
         var ndur = (avail + tw) / 80 * 1000;                        // ok. 80 px/s
@@ -908,15 +909,6 @@ function drawDiag(v, T){
       }
     }
     nm.style.transform = tf;
-    if (ZI && ZI.bd[i]) {                                           // czerwona etykieta przy nazwie przystanku granicznego (pod tym samym kątem)
-      var gl = box("gw", x - 3 + (bh / 2) * Math.sin(rad), Y - 11 - bh, 0, bh), effW = nm.offsetWidth;
-      gl.style.transform = "rotate(-" + ang + "deg)";
-      var gt = document.createElement("span"); gt.className = "gz"; gt.textContent = "granica strefy biletowej";
-      gt.style.left = (effW + 8) + "px"; gt.style.fontSize = f + "px"; gt.style.fontWeight = getComputedStyle(nm).fontWeight; gt.style.lineHeight = bh + "px"; gt.style.top = "0px";
-      gl.appendChild(gt);
-      var availL = (Y - 11 - 100) / Math.sin(rad) - effW - 10, gw = gt.offsetWidth;
-      if (gw > availL) gt.style.transform = "scaleX(" + Math.max(0.5, availL / gw) + ")";
-    }
   });
 
   // kreski ulic: w miejscu zmiany ulicy ukośnie w dół w lewo (45°), nazwa wzdłuż odcinka między kreskami
