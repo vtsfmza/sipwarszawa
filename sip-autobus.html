@@ -620,7 +620,8 @@ function announce(v){
       add(vSnd("Linia (WTP)")); add(vSnd(String(v.line).toUpperCase()));
       add(vSnd("Kierunek (WTP)")); name(v.stops[v.stops.length - 1]);
     }
-    add(vSnd(nz ? "Przystanek na Żądanie (WTP)" : "Przystanek (WTP)")); name(s);
+    add(vSnd("Przystanek (WTP)")); name(s);                           // "Przystanek: <nazwa>", a na żądanie dopiero po nazwie
+    if (nz) add(vSnd("Przystanek na Żądanie (WTP)"));
     if (last) add(vSnd("Przystanek końcowy, prosimy o opuszczenie pojazdu (WTP)"));
   } else {
     if (VOICE.gong) add(vSnd("Gong BUSE - Następny przystanek"));
