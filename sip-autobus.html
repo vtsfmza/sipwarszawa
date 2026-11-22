@@ -168,6 +168,21 @@ button{padding:4px 10px}
 #foot{right:15px;bottom:9px;gap:16px;font-size:13.5px;font-weight:700;color:#222}
 #foot .lg{display:flex;align-items:center;gap:6px}
 #foot img{position:static;display:block;width:24px;height:24px}
+
+/* panel: sekcje, zwijane dane API */
+.panel h2{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.panel h2::before{content:"";width:3px;height:11px;border-radius:2px;background:var(--accent)}
+.hint{font-size:11.5px;color:var(--muted);margin-top:6px}
+.opts{display:flex;flex-direction:column;gap:4px}
+#prev,#next{min-width:92px;padding:6px 14px}
+button:hover:not(:disabled){border-color:var(--accent)}
+button.primary:hover:not(:disabled){filter:brightness(1.08)}
+details.panel>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+details.panel>summary::-webkit-details-marker{display:none}
+details.panel>summary::before{content:"▸";font-size:11px;transition:transform .15s}
+details.panel[open]>summary::before{transform:rotate(90deg)}
+details.panel>summary .dsum{margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0;color:var(--ok);font-size:12px}
+textarea#infoTxt{margin-top:6px}
 </style>
 </head>
 <body>
@@ -194,23 +209,8 @@ button{padding:4px 10px}
   </div>
 
   <div class="panels">
-  <section class="panel" aria-labelledby="h-conn">
-    <h2 id="h-conn">1. Dane z API</h2>
-    <div class="grid">
-      <label>Klucz API
-        <input type="password" id="apiKey" autocomplete="off" placeholder="klucz z dane.um.warszawa.pl (tylko do trybu na żywo)">
-      </label>
-      <label class="chk" style="align-self:end"><input type="checkbox" id="saveKey"> Zapamiętaj klucz w tej przeglądarce</label>
-      <label class="chk" style="align-self:end"><input type="checkbox" id="showKey"> Pokaż klucz</label>
-    </div>
-    <div class="btns" style="margin-top:10px">
-      <button class="primary" id="loadStatic">Pobierz trasy i nazwy przystanków</button>
-    </div>
-    <div class="status" id="st1" role="status" aria-live="polite"></div>
-  </section>
-
   <section class="panel" aria-labelledby="h-line">
-    <h2 id="h-line">2. Linia</h2>
+    <h2 id="h-line">Linia</h2>
     <div class="grid">
       <label>Numer linii
         <input type="text" id="line" list="lines" value="123" autocomplete="off" inputmode="text">
@@ -228,7 +228,7 @@ button{padding:4px 10px}
   </section>
 
   <section class="panel" aria-labelledby="h-mode">
-    <h2 id="h-mode">3. Tryb pracy</h2>
+    <h2 id="h-mode">Odtwarzanie</h2>
     <div class="radio" role="radiogroup" aria-label="Tryb">
       <label><input type="radio" name="mode" value="sim" checked> Symulacja trasy</label>
       <label><input type="radio" name="mode" value="live"> Na żywo (pozycja autobusu)</label>
@@ -239,13 +239,8 @@ button{padding:4px 10px}
         <button id="prev" aria-label="Poprzedni krok">◀ Wstecz</button>
         <button id="next" aria-label="Następny krok">Dalej ▶</button>
         <label class="chk"><input type="checkbox" id="auto" checked> Przesuwaj automatycznie</label>
-        <label class="chk"><input type="checkbox" id="voice"> Zapowiedzi głosowe</label>
-        <label class="chk"><input type="checkbox" id="voiceName"> Zapowiedź na przystanku: sama nazwa (bez słowa „Przystanek”)</label>
-        <div id="voiceSt" class="status"></div>
-        <label class="chk"><input type="checkbox" id="infoOn"> Okienko „Informacje” na ekranie</label>
-        <textarea id="infoTxt" maxlength="400" rows="2" placeholder="Treść komunikatu, np. Przystanek Dworzec Centralny nieczynny"></textarea>
-        <span class="sub">Strzałki <kbd>←</kbd> <kbd>→</kbd> działają też z klawiatury.</span>
       </div>
+      <div class="hint">Strzałki <kbd>←</kbd> <kbd>→</kbd> działają też z klawiatury.</div>
     </div>
 
     <div id="liveBox" style="margin-top:12px" hidden>
@@ -269,13 +264,41 @@ button{padding:4px 10px}
     </div>
   </section>
 
-  <section class="panel wide">
+  <section class="panel" aria-labelledby="h-voice">
+    <h2 id="h-voice">Zapowiedzi głosowe</h2>
+    <div class="opts">
+      <label class="chk"><input type="checkbox" id="voice"> Zapowiedzi głosowe włączone</label>
+      <label class="chk"><input type="checkbox" id="voiceName"> Na przystanku tylko nazwa (bez słowa „Przystanek”)</label>
+    </div>
+    <div id="voiceSt" class="status"></div>
+    <div class="hint">Na pierwszym przystanku: linia i kierunek, na ostatnim: przystanek końcowy, na granicy stref: „Granica strefy biletowej”.</div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-screen">
+    <h2 id="h-screen">Ekran</h2>
     <div class="btns">
       <button id="full">Pełny ekran</button>
       <button id="openSide" title="Otwiera tablicę boczną w nowej karcie; pokazuje tę samą linię, cel i ulice trasy">Tablica boczna ↗</button>
-      <span class="sub">Podgląd na górze jest skalowany. Pełny ekran daje dokładnie 1920×540 na ekranie tej wielkości.</span>
     </div>
+    <label class="chk" style="margin-top:8px"><input type="checkbox" id="infoOn"> Okienko „Informacje” na ekranie</label>
+    <textarea id="infoTxt" maxlength="400" rows="2" placeholder="Treść komunikatu, np. Przystanek Dworzec Centralny nieczynny"></textarea>
+    <div class="hint">Podgląd na górze jest skalowany. Pełny ekran daje dokładnie 1920×540 na ekranie tej wielkości.</div>
   </section>
+
+  <details class="panel wide" id="dataBox" open>
+    <summary id="h-conn"><span>Dane i klucz API</span><span class="dsum" id="dataSum"></span></summary>
+    <div class="grid" style="margin-top:8px">
+      <label>Klucz API
+        <input type="password" id="apiKey" autocomplete="off" placeholder="klucz z dane.um.warszawa.pl (tylko do trybu na żywo)">
+      </label>
+      <label class="chk" style="align-self:end"><input type="checkbox" id="saveKey"> Zapamiętaj klucz w tej przeglądarce</label>
+      <label class="chk" style="align-self:end"><input type="checkbox" id="showKey"> Pokaż klucz</label>
+    </div>
+    <div class="btns" style="margin-top:10px">
+      <button class="primary" id="loadStatic">Pobierz trasy i nazwy przystanków</button>
+    </div>
+    <div class="status" id="st1" role="status" aria-live="polite"></div>
+  </details>
   </div>
 </div>
 
@@ -451,6 +474,8 @@ function loadStatic(){
     setStatus("st4", "Współrzędne z GTFS: " + S.coords.size + " przystanków.", "ok");
     setStatus("st1", "Wczytano " + Object.keys(S.routes).length + " linii i " + Object.keys(S.names).length + " przystanków (GTFS ZTM" +
       (d.built ? ", stan z " + new Date(d.built * 1000).toLocaleDateString("pl-PL") : "") + "). Ulice i dzielnice dociągają się z OpenStreetMap w tle.", "ok");
+    $("dataSum").textContent = "✓ " + Object.keys(S.routes).length + " linii, " + Object.keys(S.names).length + " przystanków";
+    if (!$("mode_live").checked) $("dataBox").open = false;                // dane wczytane: zwiń sekcję (w trybie na żywo zostaje otwarta)
     onLine();
   }).catch(function(e){
     var msg = e.message;
@@ -1142,6 +1167,7 @@ function applyLiveInfoOnly(){ /* w trybie na żywo wariant wybiera program */ }
 function setMode(){
   var liveOn = $("mode_live").checked;
   $("simBox").hidden = liveOn; $("liveBox").hidden = !liveOn;
+  if (liveOn) $("dataBox").open = true;                                  // na żywo potrzebny klucz API
   clearTimeout(simTimer); stopLive();
   if (liveOn) { S.view = { mode:"standby", stops:[], idx:0, atStop:true, line:$("line").value.trim(), type:typeFor($("line").value.trim()) }; render(); }
   else onVariant();
@@ -1178,6 +1204,8 @@ function fitStage(){
   $("startLive").addEventListener("click", startLive);
   $("stopLive").addEventListener("click", function(){ stopLive(); setStatus("st3", "Zatrzymano odświeżanie."); });
   $("voice").addEventListener("change", voiceToggle);
+  try { if (localStorage.getItem("sip_auto") === "0") $("auto").checked = false; } catch(e){}
+  $("auto").addEventListener("change", function(){ try { localStorage.setItem("sip_auto", $("auto").checked ? "1" : "0"); } catch(e){} });
   try { var vq = new URLSearchParams(location.search).get("voicename"); $("voiceName").checked = vq === "1" || (vq !== "0" && localStorage.getItem("sip_voicename") === "1"); } catch(e){}
   $("voiceName").addEventListener("change", function(){ try { localStorage.setItem("sip_voicename", $("voiceName").checked ? "1" : "0"); } catch(e){} });
   $("gtfsFetch").addEventListener("click", gtfsFetch);
