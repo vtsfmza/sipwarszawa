@@ -152,6 +152,10 @@ button{padding:4px 10px}
 #diag .cb svg{display:block}
 #diag .gw{position:absolute;transform-origin:0 100%;white-space:nowrap}
 #diag .gw .gz{position:absolute;top:0;background:#d3232f;color:#fff;font-weight:700;border-radius:2px;padding:0 4px;white-space:nowrap;transform-origin:0 50%}
+#hdr .trw{display:flex;align-items:center;height:62px;overflow:hidden;margin-left:12px;align-self:center;flex:none}
+#hdr .tri{display:block;line-height:1.12;font-size:19px;color:#444;font-weight:400;white-space:normal;max-width:100%}
+#hdr .ti2{position:static;display:inline-block;width:1.25em;height:1.25em;vertical-align:-.25em;margin:0 .3em 0 .7em}
+#hdr .tl{white-space:normal}
 #hdr .hz{align-self:center;margin-left:16px;background:#d3232f;color:#fff;font-size:20px;font-weight:700;line-height:1;padding:5px 10px;border-radius:3px}
 #hdr .nmw{position:relative;display:inline-block;overflow:hidden;height:62px;align-self:center}
 #hdr .nmp{position:absolute;left:0;top:0;white-space:nowrap;font-size:46px;font-weight:700;line-height:62px}
@@ -563,7 +567,15 @@ function arrowSvg(nz, c){
     (nz ? '' : '<circle cx="14" cy="15" r="5" fill="'+c+'"/>') +
     '<path d="M26 15H68M58 6l10 9-10 9" fill="none" stroke="'+c+'" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
-function transHtml(tr){ return tr.map(function(g){ return '<img class="ti" src="img/' + g.type + '.png" alt=""><span class="tr">' + g.lines + '</span>'; }).join(""); }
+function transHtml(tr){                                              // wszystkie przesiadki w bloku: zawija się do kilku wierszy, a czcionka maleje tak, by zmieścić wszystkie linie
+  return '<span class="trw"><span class="tri">' + tr.map(function(g){ return '<img class="ti2" src="img/' + g.type + '.png" alt=""><span class="tl">' + g.lines + '</span>'; }).join(" ") + '</span></span>';
+}
+function fitTrans(blk, wpx){
+  blk.style.width = Math.round(wpx) + "px";
+  var inn = blk.firstChild, fs = 19;
+  inn.style.fontSize = fs + "px";
+  while (inn.offsetHeight > 62 && fs > 9) { fs -= 1; inn.style.fontSize = fs + "px"; }
+}
 
 function transfersAt(s, line){
   var set = S.zl && s.z && S.zl[s.z]; if (!set) return [];
@@ -571,14 +583,9 @@ function transfersAt(s, line){
   Object.keys(set).filter(function(x){ return x.toUpperCase() !== L && !/^N\d/i.test(x); })   // linie N nie występują w przesiadkach: ani dla linii dziennych, ani nocnych
     .sort(function(a, b){ return a.localeCompare(b, "pl", { numeric:true }); })
     .forEach(function(l){ var t = /^\d{1,2}$/.test(l) ? "tram" : /^M\d/i.test(l) ? "metro" : ((S.ltype && S.ltype[l]) || "bus"); (g[t] || g.bus).push(l); });
-  // limit linii w nagłówku (12), ale każda grupa ma gwarantowane miejsce (min. 4), żeby tramwaje nie wypychały autobusów ani metra
-  var kinds = ["metro", "tram", "bus"], cap = {}, used = 0, out = [];
-  kinds.forEach(function(t){ cap[t] = Math.min(g[t].length, 4); used += cap[t]; });
-  var spare = Math.max(0, 12 - used);
-  kinds.forEach(function(t){ var add = Math.min(spare, g[t].length - cap[t]); cap[t] += add; spare -= add; });
-  kinds.forEach(function(t){                                          // kolejność: najpierw metro, potem tramwaje, na końcu autobusy
-    var ls = g[t].slice(0, cap[t]);
-    if (ls.length) out.push({ type:t, lines:ls.join(" ") });
+  var out = [];
+  ["metro", "tram", "bus"].forEach(function(t){                       // wszystkie linie, w kolejności: najpierw metro, potem tramwaje, na końcu autobusy
+    if (g[t].length) out.push({ type:t, lines:g[t].join(" ") });
   });
   return out;
 }
@@ -642,7 +649,10 @@ function drawHdr(v){
   h.children[0].textContent = hdrLabel(v, nz);
   h.children[0].style.color = v.atStop ? LC : "";                    // na przystanku etykieta w kolorze linii, przy „następny przystanek” szara
   var nm = h.children[1]; nm.textContent = s.name; nm.style.color = LC;
+  var blk = h.querySelector(".trw"), TW = 440;
+  if (blk) fitTrans(blk, TW);
   var w = h.scrollWidth;
+  if (blk && w > 1190) { fitTrans(blk, TW - Math.min(w - 1190, TW - 260)); w = h.scrollWidth; }   // najpierw zwęża się blok przesiadek, dopiero potem nazwa
   if (w > 1190) {
     var avail = Math.max(260, 1190 - (w - nm.offsetWidth) - 4), key = v.line + "|" + s.id + "|" + s.name;
     if (HN.key !== key) { HN.key = key; HN.t = Date.now(); }
