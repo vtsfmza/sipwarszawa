@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIP Metro</title>
+<style>
+@font-face{font-family:"Frutiger";src:url("Fonts/Frutiger_Roman.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Frutiger";src:url("Fonts/Frutiger_Bold.ttf") format("truetype");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Frutiger";src:url("Fonts/Frutiger_Black.ttf") format("truetype");font-weight:900;font-style:normal;font-display:swap}
+:root{--bg:#eceef2;--panel:#fff;--fg:#1d2430;--muted:#5d6878;--line:#d5d9e0;--field:#f4f5f7;--accent:#88007c;
+  --ui:"Frutiger","Open Sans","Noto Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#12151b;--panel:#1b2029;--fg:#e6e9ee;--muted:#9aa5b4;--line:#2d3644;--field:#12151b}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.35 var(--ui)}
+.page{max-width:1100px;margin:0 auto;padding:8px 12px 12px;display:flex;flex-direction:column;gap:8px}
+h1{margin:0;font-size:16px}
+.sub{color:var(--muted);font-size:12px}
+#controls{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+#controls label{display:flex;align-items:center;gap:6px;color:var(--fg)}
+select,button{font:inherit;color:var(--fg);background:var(--field);border:1px solid var(--line);border-radius:5px;padding:4px 8px}
+button{background:transparent;cursor:pointer}
+#wrap{position:relative;width:100%;background:#000;overflow:hidden;border-radius:4px}
+#stage{position:absolute;left:0;top:0;width:1280px;height:800px;transform-origin:0 0;background:#fff;overflow:hidden;
+  font-family:"Frutiger","Open Sans","Noto Sans","Segoe UI",Arial,sans-serif;color:#222;--lc:#1b7fc9}
+#bg{position:absolute;left:0;top:0;width:1280px;height:800px;display:block}
+#hdr{position:absolute;left:47px;top:14px;height:160px;display:flex;align-items:center;white-space:nowrap;transform-origin:0 50%}
+#hl{font-size:150px;font-weight:900;letter-spacing:-4px;line-height:1;color:#222}
+#hd{font-size:104px;font-weight:700;color:var(--lc);margin-left:18px;line-height:1}
+#band{position:absolute;left:47px;top:188px;width:1186px;height:90px;display:flex;align-items:center;gap:16px;white-space:nowrap}
+#bl{font-size:30px;color:#555}
+#bn{font-size:60px;font-weight:700;color:var(--lc);transform-origin:0 50%}
+.badge{font-size:28px;font-weight:700;color:#fff;border-radius:8px;padding:0 12px;line-height:44px}
+#diag{position:absolute;left:0;top:0;width:1280px;height:800px}
+#diag .ln{position:absolute;height:10px;border-radius:5px}
+#diag .dot{position:absolute;border-radius:50%;background:#fff}
+#diag .nm{position:absolute;white-space:nowrap;color:#2b2b2b;transform-origin:0 100%;font-weight:700}
+#diag .nm.past{color:#b4b4b4}
+#diag .nm.cur{color:var(--lc)}
+#diag .mn{position:absolute;width:60px;text-align:center;font-size:20px;color:#555}
+#diag .gap{position:absolute;width:3px;background:#fff}
+#diag .dz{position:absolute;color:#fff;font-weight:700;text-align:center;white-space:nowrap;overflow:hidden;font-size:26px}
+#dt{position:absolute;left:428px;top:755px;width:836px;height:34px;display:flex;align-items:center;gap:14px;padding-left:16px;color:#fff;white-space:nowrap}
+#dt b{font-size:28px;font-weight:700}
+#dt span{font-size:25px}
+body.kiosk{background:#000;cursor:none}
+body.kiosk #controls,body.kiosk header{display:none!important}
+body.kiosk .page{padding:0;max-width:none;gap:0}
+body.kiosk #wrap{position:fixed;inset:0;height:auto!important;border-radius:0}
+</style>
+</head>
+<body>
+<div class="page">
+  <header><h1>SIP Metro</h1> <span class="sub">Ekran w wagonie metra 1280×800 (tło: img/metro-bg.png)</span></header>
+  <div id="controls">
+    <label>Linia <select id="line"><option>M1</option><option>M2</option></select></label>
+    <label>Kierunek <select id="dir"></select></label>
+    <button id="prev" aria-label="Poprzedni krok">◀ Wstecz</button>
+    <button id="next" aria-label="Następny krok">Dalej ▶</button>
+    <label><input type="checkbox" id="auto" checked> Przesuwaj automatycznie</label>
+    <button id="full">Pełny ekran</button>
+    <span class="sub">Strzałki ← → też działają. Parametry: ?line=M2&amp;dir=-1&amp;kiosk=1&amp;en=0</span>
+  </div>
+  <div id="wrap">
+    <div id="stage">
+      <img id="bg" src="img/metro-bg.png" alt="">
+      <div id="hdr"><span id="hl"></span><span id="hd"></span></div>
+      <div id="band"><span id="bl"></span><span id="bn"></span><span id="bx"></span></div>
+      <div id="diag"></div>
+      <div id="dt"><b id="tm"></b><span id="dd"></span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $ = function(id){ return document.getElementById(id); };
+
+// Dane: [nazwa, minuty od stacji początkowej, dzielnica]. M1 wg ekranu w wagonie; M2 przybliżone (czasy i dzielnice do sprawdzenia).
+var LINES = {
+  M1: { color:"#1b7fc9", other:"M2", otherColor:"#d0212d", transfer:{"Świętokrzyska":1}, st:[
+    ["Kabaty",0,"Ursynów"],["Natolin",2,"Ursynów"],["Imielin",4,"Ursynów"],["Stokłosy",6,"Ursynów"],["Ursynów",8,"Ursynów"],
+    ["Służew",10,"Mokotów"],["Wilanowska",12,"Mokotów"],["Wierzbno",13,"Mokotów"],["Racławicka",15,"Mokotów"],["Pole Mokotowskie",17,"Mokotów"],
+    ["Politechnika",19,"Śródmieście"],["Centrum",20,"Śródmieście"],["Świętokrzyska",22,"Śródmieście"],["Ratusz Arsenał",24,"Śródmieście"],["Dworzec Gdański",26,"Śródmieście"],
+    ["Plac Wilsona",29,"Żoliborz"],["Marymont",31,"Żoliborz"],
+    ["Słodowiec",33,"Bielany"],["Stare Bielany",35,"Bielany"],["Wawrzyszew",37,"Bielany"],["Młociny",39,"Bielany"]] },
+  M2: { color:"#d0212d", other:"M1", otherColor:"#1b7fc9", transfer:{"Świętokrzyska":1}, st:[
+    ["Bemowo",0,"Bemowo"],["Ulrychów",2,"Wola"],["Księcia Janusza",4,"Wola"],["Młynów",6,"Wola"],["Płocka",8,"Wola"],["Rondo Daszyńskiego",10,"Wola"],
+    ["Rondo ONZ",12,"Śródmieście"],["Świętokrzyska",13,"Śródmieście"],["Nowy Świat-Uniwersytet",15,"Śródmieście"],["Centrum Nauki Kopernik",17,"Śródmieście"],
+    ["Stadion Narodowy",19,"Praga-Płd."],
+    ["Dworzec Wileński",21,"Praga-Płn."],["Szwedzka",23,"Praga-Płn."],
+    ["Targówek Mieszkaniowy",25,"Targówek"],["Trocka",27,"Targówek"],["Zacisze",29,"Targówek"],["Kondratowicza",31,"Targówek"],["Bródno",33,"Targówek"]] }
+};
+
+var P = new URLSearchParams(location.search);
+var EN_ON = P.get("en") !== "0", EN = false;
+var V = { line:LINES[P.get("line")] ? P.get("line") : "M1", dir:P.get("dir") === "-1" ? -1 : 1, idx:0, atStop:true, stops:[] };
+var timer = null;
+
+function build(){
+  var L = LINES[V.line], src = L.st, n = src.length, tot = src[n - 1][1];
+  V.stops = (V.dir > 0 ? src.map(function(s){ return { name:s[0], t:s[1], dz:s[2] }; })
+                       : src.slice().reverse().map(function(s){ return { name:s[0], t:tot - s[1], dz:s[2] }; }));
+  V.idx = 0; V.atStop = true;
+  var st = $("stage"); st.style.setProperty("--lc", L.color);
+  var sel = $("dir"); sel.innerHTML = "";
+  [1, -1].forEach(function(d){
+    var o = document.createElement("option"); o.value = d;
+    o.textContent = "→ " + (d > 0 ? src[n - 1][0] : src[0][0]); sel.appendChild(o);
+  });
+  sel.value = V.dir;
+}
+
+function fitText(el, maxW){
+  el.style.transform = "none";
+  var w = el.scrollWidth;
+  if (w > maxW) el.style.transform = "scaleX(" + Math.max(.5, maxW / w) + ")";
+}
+
+function drawHead(){
+  var last = V.stops[V.stops.length - 1];
+  $("hl").textContent = V.line;
+  $("hd").textContent = "→" + last.name;
+  var h = $("hdr"); h.style.transform = "none";
+  var w = h.scrollWidth; h.style.transform = w > 1190 ? "scaleX(" + (1190 / w) + ")" : "none";
+}
+
+function drawBand(){
+  var s = V.stops[V.idx], L = LINES[V.line];
+  var pl = V.atStop ? "STACJA:" : "NASTĘPNA STACJA:", en = V.atStop ? "CURRENT STATION:" : "NEXT STATION:";
+  $("bl").textContent = EN ? en : pl;
+  var bn = $("bn"); bn.textContent = s.name; fitText(bn, 880);
+  var bx = $("bx"); bx.innerHTML = "";
+  if (L.transfer[s.name]) {
+    var b = document.createElement("span"); b.className = "badge"; b.style.background = L.otherColor; b.textContent = L.other; bx.appendChild(b);
+  }
+}
+
+function drawDiag(){
+  var el = $("diag"); el.innerHTML = "";
+  var L = LINES[V.line], S = V.stops, n = S.length, cur = V.idx;
+  var X0 = 70, X1 = 1210, LY = 530, ANG = 60, rad = ANG * Math.PI / 180, NB = LY - 24, NT = 292;
+  function xOf(i){ return X0 + i * (X1 - X0) / (n - 1); }
+  function box(cls, l, t, w, h, css){
+    var d = document.createElement("div"); d.className = cls;
+    d.style.cssText = "left:" + l + "px;top:" + t + "px;" + (w ? "width:" + w + "px;" : "") + (h ? "height:" + h + "px;" : "") + (css || "");
+    el.appendChild(d); return d;
+  }
+  // linia: szara do ostatnio minionej stacji, dalej w kolorze linii
+  var doneK = V.atStop ? cur : Math.max(cur - 1, 0);
+  box("ln", xOf(0), LY - 5, xOf(doneK) - xOf(0), 10, "background:#c4c4c4");
+  box("ln", xOf(doneK), LY - 5, xOf(n - 1) - xOf(doneK), 10, "background:" + L.color);
+
+  // minuty do stacji liczone od bieżącej pozycji (w drodze: środek odcinka)
+  var ref = V.atStop ? S[cur].t : (S[Math.max(cur - 1, 0)].t + S[cur].t) / 2;
+
+  S.forEach(function(s, i){
+    var x = xOf(i), passed = i < cur, big = i === 0 || i === n - 1 || i === cur;
+    var col = passed ? "#a9a9a9" : L.color, size = big ? 26 : 22;
+    box("dot", x - size / 2, LY - size / 2, size, size, "border:4px solid " + col + (i === cur ? ";background:" + L.color : ""));
+    if (!passed) {
+      var m = Math.max(0, Math.round(s.t - ref));
+      var mn = box("mn", x - 30, LY + 22, 60, 26); mn.textContent = m + "'"; if (i === cur) mn.style.fontWeight = 700;
+    }
+    var fs = 24, bh = 30;
+    var nm = box("nm" + (passed ? " past" : "") + (i === cur ? " cur" : ""), x - 3 + (bh / 2) * Math.sin(rad), NB - bh, 0, bh);
+    nm.style.width = "auto"; nm.style.lineHeight = bh + "px"; nm.style.fontSize = fs + "px"; nm.textContent = s.name;
+    var room = Math.min((1272 - x) / Math.cos(rad), (NB - NT) / Math.sin(rad));
+    var tf = "rotate(-" + ANG + "deg)";
+    if (nm.scrollWidth > room) {
+      nm.style.fontSize = "20px";
+      if (nm.scrollWidth > room) tf += " scaleX(" + Math.max(.6, room / nm.scrollWidth) + ")";
+    }
+    nm.style.transform = tf;
+  });
+
+  // dzielnice na czerwonym pasku (y 607–656 w tle)
+  var barL = 47, barR = 1233, BT = 607, BH = 49, g0 = 0;
+  while (g0 < n) {
+    var g1 = g0; while (g1 + 1 < n && S[g1 + 1].dz === S[g0].dz) g1++;
+    var xa = g0 === 0 ? barL : (xOf(g0 - 1) + xOf(g0)) / 2, xb = g1 === n - 1 ? barR : (xOf(g1) + xOf(g1 + 1)) / 2;
+    if (g0 > 0) box("gap", xa - 1.5, BT, 3, BH);
+    var dz = box("dz", xa + 3, BT, xb - xa - 6, BH, "line-height:" + BH + "px");
+    var sp = document.createElement("span"); sp.style.display = "inline-block"; sp.textContent = S[g0].dz; dz.appendChild(sp);
+    var avail = dz.clientWidth;
+    if (sp.offsetWidth > avail) dz.style.fontSize = "20px";
+    if (sp.offsetWidth > avail * 1.15) sp.style.visibility = "hidden";          // za wąski segment: bez etykiety
+    else if (sp.offsetWidth > avail) sp.style.transform = "scaleX(" + (avail / sp.offsetWidth) + ")";
+    g0 = g1 + 1;
+  }
+}
+
+function render(){ drawHead(); drawBand(); drawDiag(); }
+
+function clock(){
+  var d = new Date();
+  $("tm").textContent = d.getHours() + ":" + ("0" + d.getMinutes()).slice(-2);
+  var wd = d.toLocaleDateString("pl-PL", { weekday:"long" });
+  $("dd").textContent = wd + " " + d.getDate() + "." + ("0" + (d.getMonth() + 1)).slice(-2) + "." + d.getFullYear();
+}
+
+function step(dir){
+  var n = V.stops.length;
+  if (dir > 0) {
+    if (V.atStop) { if (V.idx < n - 1) { V.atStop = false; V.idx++; } else { V.idx = 0; } }
+    else V.atStop = true;
+  } else {
+    if (!V.atStop) { V.atStop = true; V.idx--; }
+    else if (V.idx > 0) V.atStop = false;
+  }
+  render();
+}
+function sched(){
+  clearTimeout(timer);
+  if ($("auto").checked) timer = setTimeout(function(){ step(1); sched(); }, V.atStop ? 3500 : 4500);
+}
+
+function fit(){
+  var kiosk = document.body.classList.contains("kiosk"), st = $("stage"), wrap = $("wrap");
+  var W = kiosk ? innerWidth : wrap.clientWidth, H = kiosk ? innerHeight : 1e9, k = Math.min(W / 1280, H / 800);
+  st.style.transform = "scale(" + k + ")";
+  if (kiosk) { st.style.left = ((innerWidth - 1280 * k) / 2) + "px"; st.style.top = ((innerHeight - 800 * k) / 2) + "px"; }
+  else { st.style.left = "0"; st.style.top = "0"; wrap.style.height = (800 * k) + "px"; }
+}
+
+function init(){
+  if (P.get("kiosk")) document.body.classList.add("kiosk");
+  $("line").value = V.line;
+  if (P.get("auto") === "0") $("auto").checked = false;
+  build();
+  var i0 = parseInt(P.get("idx"), 10);
+  if (i0 >= 0 && i0 < V.stops.length) V.idx = i0;
+  render(); clock(); fit(); sched();
+  $("line").addEventListener("change", function(){ V.line = this.value; build(); render(); sched(); });
+  $("dir").addEventListener("change", function(){ V.dir = parseInt(this.value, 10); build(); render(); sched(); });
+  $("prev").addEventListener("click", function(){ step(-1); sched(); });
+  $("next").addEventListener("click", function(){ step(1); sched(); });
+  $("auto").addEventListener("change", sched);
+  $("full").addEventListener("click", function(){ var w = $("wrap"); (w.requestFullscreen || function(){}).call(w); });
+  document.addEventListener("keydown", function(e){
+    var t = (e.target.tagName || "").toLowerCase(); if (t === "input" || t === "select") return;
+    if (e.key === "ArrowRight") { step(1); sched(); } else if (e.key === "ArrowLeft") { step(-1); sched(); }
+  });
+  document.addEventListener("fullscreenchange", function(){ setTimeout(fit, 50); });
+  window.addEventListener("resize", fit);
+  setInterval(clock, 10000);
+  // etykieta stacji zmienia język PL/EN co 5 s
+  if (EN_ON) setInterval(function(){ EN = !EN; drawBand(); }, 5000);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+}
+init();
+})();
+</script>
+</body>
+</html>

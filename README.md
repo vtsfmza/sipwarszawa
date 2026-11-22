@@ -25,3 +25,8 @@ Trasa, kropki, strzałka i nazwa przystanku są fioletowe (jak na prawdziwych wy
 Zaznacz „Zapowiedzi głosowe” (albo otwórz stronę z `?voice=1`). Przy każdym kroku odtwarza się: gong, „Następny przystanek” + nazwa (oraz „na żądanie” i przesiadka do M1/M2), a na przystanku: gong, „Przystanek” + nazwa. Na pierwszym przystanku dodatkowo „Linia … kierunek …”, a na ostatnim „Przystanek końcowy, prosimy o opuszczenie pojazdu”.
 Nagrania pochodzą z banku `gtfscc.github.io/zapowiedzi*` (katalog w `zapowiedzi.json`, budowany skryptem `tools/build_zapowiedzi.py` z pliku HTML z bankiem). Przystanki bez nagrania są pomijane (nazwa trafia do konsoli przeglądarki).
 Tryb kiosku: Chrome blokuje dźwięk bez kliknięcia, więc uruchom go z `--autoplay-policy=no-user-gesture-required`.
+
+## SIP Metro
+`sip-metro.html` to osobny ekran w stylu wagonu warszawskiego metra (1280×800, tło `img/metro-bg.png`). Działa bez serwera: wystarczy otworzyć plik (albo przez `serve.py`: http://localhost:8000/sip-metro.html).
+Parametry: `?line=M1|M2`, `dir=1|-1` (kierunek), `idx=N` (stacja startowa), `auto=0` (bez automatycznego przesuwania), `kiosk=1` (pełny ekran bez panelu), `en=0` (bez zmiany etykiety na angielską co 5 s).
+Dane M1 (stacje, minuty, dzielnice) pochodzą z ekranu w wagonie; **dane M2 są przybliżone** (czasy i dzielnice do sprawdzenia). Dane stacji są na początku skryptu w obiekcie `LINES`. Minuty liczone są od bieżącej pozycji; stacje miniętę są szare. Przesiadka M1↔M2 na Świętokrzyskiej jest oznaczona plakietką. Zapowiedzi głosowych w metrze nie ma.
