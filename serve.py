@@ -32,7 +32,12 @@ def _rows(zf, name):
 def build_routes(zip_path):
     """Z GTFS robi {stops:{id:[nazwa,lat,lon]}, routes:{linia:[{code,dir,headsign,stops:[[id,typ],..]}]}}."""
     with zipfile.ZipFile(zip_path) as zf:
-        route_name = {r["route_id"]: r.get("route_short_name") or r["route_id"] for r in _rows(zf, "routes.txt")}
+        route_name, ltype = {}, {}
+        TYPE_MAP = {"0": "tram", "900": "tram", "1": "metro", "400": "metro", "2": "bus", "3": "bus", "11": "bus", "700": "bus", "800": "bus"}
+        for r in _rows(zf, "routes.txt"):
+            nm = r.get("route_short_name") or r["route_id"]
+            route_name[r["route_id"]] = nm
+            ltype[nm] = TYPE_MAP.get((r.get("route_type") or "").strip(), "bus")
         trips = {}
         for t in _rows(zf, "trips.txt"):
             trips[t["trip_id"]] = (route_name.get(t["route_id"], t["route_id"]), t.get("direction_id") or "0",
@@ -73,14 +78,16 @@ def build_routes(zip_path):
             used.update(x[0] for x in sig)
     for l in routes:
         routes[l].sort(key=lambda v: v["code"])
-    return {"built": int(time.time()), "stops": {k: v for k, v in stops.items() if k in used}, "routes": routes}
+    return {"built": int(time.time()), "types": ltype, "stops": {k: v for k, v in stops.items() if k in used}, "routes": routes}
 
 def get_routes_json():
     with _lock:
         try:
             if time.time() - os.path.getmtime(CACHE) < CACHE_TTL:
                 with open(CACHE, "rb") as f:
-                    return f.read()
+                    data = f.read()
+                if b'"types"' in data[:200]:        # starszy cache bez typów linii: zbuduj od nowa
+                    return data
         except OSError:
             pass
         print("Pobieram GTFS z %s ..." % GTFS_URL, flush=True)

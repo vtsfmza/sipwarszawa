@@ -52,21 +52,23 @@ h1{margin:0;font-size:20px;font-weight:700}
 #diag .nm{position:absolute;white-space:nowrap;font-weight:400;color:#2e2e2e;transform-origin:0 100%}
 #diag .nm.past{color:#bdbdbd}
 #diag .nm.end{font-weight:600;color:#1d1d1d}
-#diag .nm.cur{color:var(--lc,#000)!important;font-weight:700!important}
+#diag .nm.cur{color:var(--lc,#88007c)!important;font-weight:700!important}
 #diag .bar{position:absolute;background:#d3232f}
 #diag .gap{position:absolute;width:2px;background:#fff}
-#diag .nm img{height:1.25em;vertical-align:middle;margin-left:5px}
+#diag .nm img{position:static;display:inline-block;height:1.25em;vertical-align:middle;margin-left:5px}
 #diag .dz{position:absolute;color:#fff;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden}
 #diag .strip{position:absolute;background:rgba(255,255,255,.92)}
 #diag .tick{position:absolute;width:1px;background:#8a8a8a}
 #diag .sl{position:absolute;height:0;border-top:1px solid #6a6a6a;transform-origin:100% 0}
 #diag .st{position:absolute;white-space:nowrap;color:#444;transform-origin:50% 50%}
-#diag .bus{position:absolute;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:12px solid var(--lc,#000)}
-#diag .bus{position:absolute;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:13px solid var(--lc,#000)}
+#diag .bus{position:absolute;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:12px solid var(--lc,#88007c)}
+#diag .bus{position:absolute;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:13px solid var(--lc,#88007c)}
 #foot{position:absolute;right:38px;bottom:12px;display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;color:#333;white-space:nowrap}
 #hdr{position:absolute;left:640px;top:14px;height:62px;display:flex;align-items:center;white-space:nowrap;transform-origin:0 50%}
 #hdr .lab{font-size:31px;font-weight:300;color:#4a4a4a;margin-right:12px}
 #hdr .nm{font-size:46px;font-weight:700}
+#hdr .ti{position:static;width:26px;height:26px;margin-left:22px}
+#hdr .ti + .tr{margin-left:8px}
 #hdr .tr{font-size:19px;color:#666;font-weight:400;margin-left:12px}
 #clock{font-size:18px!important;white-space:nowrap;letter-spacing:-.2px}
 body.kiosk{background:#000}
@@ -212,14 +214,14 @@ var API = "https://dane.um.warszawa.pl/api/action/";
 
 // ---------- Typy linii ----------
 var TYPES = {
-  zwykla:{ label:"Zwykła", bg:IMG.zwykla, num:"#000000", dot:"#000000" },
-  przyspieszona:{ label:"Przyspieszona", bg:IMG.przyspieszona, num:"#d3232f", dot:"#d3232f" },
+  zwykla:{ label:"Zwykła", bg:"img/zwykla.png", num:"#262626", dot:"#88007c" },
+  przyspieszona:{ label:"Przyspieszona", bg:IMG.przyspieszona, num:"#d3232f", dot:"#88007c" },
   nocna:{ label:"Nocna", bg:IMG.nocna, num:"#ffffff", dot:"#88007c" },
-  strefowa:{ label:"Strefowa", bg:IMG.strefowa, num:"#1f8f1f", dot:"#1f8f1f" },
-  strefowa_okresowa:{ label:"Strefowa okresowa", bg:IMG.strefowa_okresowa, num:"#1f8f1f", dot:"#1f8f1f" },
-  okresowa:{ label:"Okresowa", bg:IMG.okresowa, num:"#000000", dot:"#000000" },
-  okresowa_przyspieszona:{ label:"Okresowa przyspieszona", bg:IMG.okresowa_przyspieszona, num:"#d3232f", dot:"#d3232f" },
-  specjalna:{ label:"Specjalna", bg:IMG.specjalna, num:"#000000", dot:"#000000" }
+  strefowa:{ label:"Strefowa", bg:IMG.strefowa, num:"#1f8f1f", dot:"#88007c" },
+  strefowa_okresowa:{ label:"Strefowa okresowa", bg:IMG.strefowa_okresowa, num:"#1f8f1f", dot:"#88007c" },
+  okresowa:{ label:"Okresowa", bg:IMG.okresowa, num:"#262626", dot:"#88007c" },
+  okresowa_przyspieszona:{ label:"Okresowa przyspieszona", bg:IMG.okresowa_przyspieszona, num:"#d3232f", dot:"#88007c" },
+  specjalna:{ label:"Specjalna", bg:IMG.specjalna, num:"#88007c", dot:"#88007c" }
 };
 // Ustalenie typu po numerze to przybliżenie; zawsze można wskazać typ ręcznie.
 function detectType(line){
@@ -357,7 +359,7 @@ function loadStatic(){
       });
     });
     if (!Object.keys(routes).length) throw new Error("Serwer zwrócił trasy, ale bez rozpoznanych przystanków (sprawdź gtfs-cache.json i usuń go, jeśli jest stary).");
-    S.routes = routes; S.names = names; S.zl = zl;
+    S.routes = routes; S.names = names; S.zl = zl; S.ltype = d.types || {};
     coords.forEach(function(v, k){ S.coords.set(k, v); });
     S.cache.clear();
     var dl = $("lines"); dl.innerHTML = "";
@@ -467,21 +469,27 @@ function arrowSvg(nz, c){
     (nz ? '' : '<circle cx="14" cy="15" r="5" fill="'+c+'"/>') +
     '<path d="M26 15H68M58 6l10 9-10 9" fill="none" stroke="'+c+'" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
-var BUSICON = '<svg width="24" height="24" viewBox="0 0 26 26" style="margin-left:22px"><circle cx="13" cy="13" r="12" fill="#d3122b"/><rect x="7" y="6" width="12" height="11" rx="2" fill="#fff"/><rect x="9" y="8" width="8" height="4" fill="#d3122b"/><circle cx="10" cy="19.5" r="1.5" fill="#fff"/><circle cx="16" cy="19.5" r="1.5" fill="#fff"/></svg>';
+function transHtml(tr){ return tr.map(function(g){ return '<img class="ti" src="img/' + g.type + '.png" alt=""><span class="tr">' + g.lines + '</span>'; }).join(""); }
 
 function transfersAt(s, line){
-  var set = S.zl && s.z && S.zl[s.z]; if (!set) return "";
-  var L = String(line).toUpperCase();
-  return Object.keys(set).filter(function(x){ return x.toUpperCase() !== L; })
-    .sort(function(a, b){ return a.localeCompare(b, "pl", { numeric:true }); }).slice(0, 10).join(" ");
+  var set = S.zl && s.z && S.zl[s.z]; if (!set) return [];
+  var L = String(line).toUpperCase(), g = { metro:[], tram:[], bus:[] };
+  Object.keys(set).filter(function(x){ return x.toUpperCase() !== L; })
+    .sort(function(a, b){ return a.localeCompare(b, "pl", { numeric:true }); })
+    .forEach(function(l){ var t = (S.ltype && S.ltype[l]) || "bus"; (g[t] || g.bus).push(l); });
+  var left = 10, out = [];
+  ["metro", "tram", "bus"].forEach(function(t){
+    var ls = g[t].slice(0, Math.max(0, left)); left -= ls.length;
+    if (ls.length) out.push({ type:t, lines:ls.join(" ") });
+  });
+  return out;
 }
 function drawHdr(v){
   var s = v.stops[v.idx], nz = s.typ === "2", h = $("hdr"), tr = transfersAt(s, v.line), LC = (TYPES[v.type] || TYPES.zwykla).dot;
   h.style.transform = "none";
-  h.innerHTML = '<span class="lab"></span><span class="nm"></span>' + arrowSvg(nz, LC) + (tr ? BUSICON + '<span class="tr"></span>' : "");
+  h.innerHTML = '<span class="lab"></span><span class="nm"></span>' + arrowSvg(nz, LC) + transHtml(tr);
   h.children[0].textContent = (v.atStop ? "PRZYSTANEK" : "NASTĘPNY PRZYSTANEK") + (nz ? " NA ŻĄDANIE" : "") + ":";
   var nm = h.children[1]; nm.textContent = s.name; nm.style.color = LC;
-  if (tr) h.lastChild.textContent = tr;
   var w = h.scrollWidth, sc = w > 1190 ? 1190 / w : 1;
   h.style.transform = sc < 1 ? "scale(" + sc + ")" : "none";
   h.style.left = Math.max(380, 1123 - w * sc / 2) + "px";

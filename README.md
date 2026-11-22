@@ -13,7 +13,7 @@ Strony nie da się otworzyć bez serwera: `localhost:8000` działa tylko wtedy, 
 Stare API `api.um.warszawa.pl` jest wyłączone; nazw ulic nie ma w GTFS, więc pasek ulic jest pusty.
 
 ## Kolory linii
-Kolor numeru, trasy, kropek, strzałki i znacznika autobusu zależy od typu linii: zwykła/okresowa/specjalna – czarny, przyspieszona – czerwony, strefowa – zielony, nocna – fioletowy.
+Trasa, kropki, strzałka i nazwa przystanku są fioletowe (jak na prawdziwych wyświetlaczach). Od typu linii zależy kolor numeru: zwykła/okresowa – czarny, przyspieszona – czerwony, strefowa – zielony, nocna – biały.
 
 ## Ulice, dzielnice, dostępność
 - Nazwy ulic i dzielnice pobiera w tle `serve.py` z OpenStreetMap (Nominatim, 1 zapytanie/s) i zapamiętuje w `geo_cache.sqlite`. Pierwsze otwarcie długiej linii wypełnia się około minuty, potem jest od razu. Możesz ustawić `SIP_CONTACT=twoj@mail` (zalecane przez Nominatim).
