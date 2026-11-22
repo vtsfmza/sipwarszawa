@@ -544,7 +544,7 @@ function transHtml(tr){ return tr.map(function(g){ return '<img class="ti" src="
 function transfersAt(s, line){
   var set = S.zl && s.z && S.zl[s.z]; if (!set) return [];
   var L = String(line).toUpperCase(), g = { metro:[], tram:[], bus:[] };
-  Object.keys(set).filter(function(x){ return x.toUpperCase() !== L && !(/^N\d/.test(L) && /^N\d/i.test(x)); })   // linia nocna nie ma przesiadek na inne N
+  Object.keys(set).filter(function(x){ return x.toUpperCase() !== L && !/^N\d/i.test(x); })   // linie N nie występują w przesiadkach: ani dla linii dziennych, ani nocnych
     .sort(function(a, b){ return a.localeCompare(b, "pl", { numeric:true }); })
     .forEach(function(l){ var t = /^\d{1,2}$/.test(l) ? "tram" : /^M\d/i.test(l) ? "metro" : ((S.ltype && S.ltype[l]) || "bus"); (g[t] || g.bus).push(l); });
   var left = 10, out = [];
