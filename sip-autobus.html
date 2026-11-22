@@ -701,10 +701,7 @@ function announce(v){
     if (VOICE.gong) add(vSnd("Gong BUSE - Następny przystanek"));
     add(vSnd("Następny Przystanek (WTP)")); name(s);
     if (nz) add(vSnd("Przystanek na Żądanie (WTP)"));
-    var all = transfersAt(s, v.line).map(function(g){ return g.lines; }).join(" ").split(" ");
-    ["M1", "M2"].forEach(function(m){ if (all.indexOf(m) >= 0) add(vSnd("Możliwość przesiadki do pociągów linii metra " + m + " (Metro)")); });
   }
-  if (!last) add(vSnd("Możliwa Kontrola Biletów (WTP)"));            // po całej zapowiedzi (poza przystankiem końcowym)
   if (miss.length) console.warn("Brak nagrania nazwy przystanku:", miss.join(", "));
   VOICE.queue = q;
   if (!q.length) { voiceStatus("Brak nagrań dla tego przystanku w banku zapowiedzi.", true); return; }

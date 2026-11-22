@@ -31,7 +31,7 @@ Trasa, kropki, strzałka i nazwa przystanku są fioletowe (jak na prawdziwych wy
 - Przedrostek miejscowości jest obcinany tylko przy spacji („Ząbki Maczka” → „Maczka”); nazwy z łącznikiem („Sowia Wola-Szkoła”) zostają w całości.
 
 ## Zapowiedzi głosowe
-Zaznacz „Zapowiedzi głosowe” (albo otwórz stronę z `?voice=1`). Przy każdym kroku odtwarza się: gong, „Następny przystanek” + nazwa (oraz „na żądanie” i przesiadka do M1/M2), a na przystanku: gong, „Przystanek” + nazwa. Na pierwszym przystanku dodatkowo „Linia … kierunek …”, a na ostatnim „Przystanek końcowy, prosimy o opuszczenie pojazdu”. Po każdej zapowiedzi (poza przystankiem końcowym) odtwarza się „Możliwa kontrola biletów”.
+Zaznacz „Zapowiedzi głosowe” (albo otwórz stronę z `?voice=1`). Przy każdym kroku odtwarza się: gong, „Następny przystanek” + nazwa (oraz „na żądanie”), a na przystanku: gong, „Przystanek” + nazwa. Na pierwszym przystanku dodatkowo „Linia … kierunek …”, a na ostatnim „Przystanek końcowy, prosimy o opuszczenie pojazdu”.
 Nagrania pochodzą z banku `gtfscc.github.io/zapowiedzi*` (katalog w `zapowiedzi.json`, budowany skryptem `tools/build_zapowiedzi.py` z pliku HTML z bankiem). Przystanki bez nagrania są pomijane (nazwa trafia do konsoli przeglądarki).
 Tryb kiosku: Chrome blokuje dźwięk bez kliknięcia, więc uruchom go z `--autoplay-policy=no-user-gesture-required`.
 
