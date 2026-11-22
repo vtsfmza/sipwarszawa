@@ -29,6 +29,13 @@ def _rows(zf, name):
     with zf.open(name) as f:
         yield from csv.DictReader(io.TextIOWrapper(f, encoding="utf-8-sig", newline=""))
 
+def _secs(t):
+    try:
+        h, m, sec = (t or "").strip().split(":")
+        return int(h) * 3600 + int(m) * 60 + int(sec)
+    except ValueError:
+        return None
+
 def build_routes(zip_path):
     """Z GTFS robi {stops:{id:[nazwa,lat,lon]}, routes:{linia:[{code,dir,headsign,stops:[[id,typ],..]}]}}."""
     with zipfile.ZipFile(zip_path) as zf:
@@ -55,10 +62,17 @@ def build_routes(zip_path):
             if cur is None or cur not in trips or not buf:
                 return
             buf.sort(key=lambda x: x[0])
-            sig = tuple((sid, "2" if ond else "1") for _, sid, ond in buf)
+            sig = tuple((sid, "2" if ond else "1") for _, sid, ond, _t in buf)
             line, d, head = trips[cur]
-            e = seqs.setdefault((line, d), {}).setdefault(sig, [0, head])
+            e = seqs.setdefault((line, d), {}).setdefault(sig, [0, head, [0.0] * len(sig)])
             e[0] += 1
+            t0 = buf[0][3]
+            if t0 is not None:                       # minuty od pierwszego przystanku (średnia z kursów)
+                last = 0.0
+                for i, b in enumerate(buf):
+                    off = (b[3] - t0) if b[3] is not None else last
+                    last = off
+                    e[2][i] += off
 
         for r in _rows(zf, "stop_times.txt"):
             if r["trip_id"] != cur:
@@ -67,18 +81,19 @@ def build_routes(zip_path):
                 seq = int(r["stop_sequence"])
             except ValueError:
                 continue
-            buf.append((seq, r["stop_id"], (r.get("pickup_type") == "3" or r.get("drop_off_type") == "3")))
+            buf.append((seq, r["stop_id"], (r.get("pickup_type") == "3" or r.get("drop_off_type") == "3"), _secs(r.get("arrival_time") or r.get("departure_time"))))
         flush()
     routes, used = {}, set()
     for (line, d), vs in seqs.items():
         best = sorted(vs.items(), key=lambda kv: -kv[1][0])[:MAX_VARIANTS]
-        for n, (sig, (cnt, head)) in enumerate(best, 1):
+        for n, (sig, (cnt, head, sums)) in enumerate(best, 1):
+            mins = [int(round(x / cnt / 60.0)) for x in sums]
             routes.setdefault(line, []).append({"code": "%s%d" % ("A" if d == "0" else "B", n), "dir": int(d),
-                                                "headsign": head, "stops": [list(x) for x in sig]})
+                                                "headsign": head, "stops": [list(x) for x in sig], "min": mins})
             used.update(x[0] for x in sig)
     for l in routes:
         routes[l].sort(key=lambda v: v["code"])
-    return {"built": int(time.time()), "types": ltype, "stops": {k: v for k, v in stops.items() if k in used}, "routes": routes}
+    return {"built": int(time.time()), "ver": 2, "types": ltype, "stops": {k: v for k, v in stops.items() if k in used}, "routes": routes}
 
 def get_routes_json():
     with _lock:
@@ -86,7 +101,7 @@ def get_routes_json():
             if time.time() - os.path.getmtime(CACHE) < CACHE_TTL:
                 with open(CACHE, "rb") as f:
                     data = f.read()
-                if b'"types"' in data[:200]:        # starszy cache bez typów linii: zbuduj od nowa
+                if b'"ver":2' in data[:200]:        # starszy cache bez typów linii: zbuduj od nowa
                     return data
         except OSError:
             pass

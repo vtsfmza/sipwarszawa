@@ -61,6 +61,8 @@ h1{margin:0;font-size:20px;font-weight:700}
 #diag .strip{position:absolute;background:rgba(255,255,255,.92)}
 #diag .tick{position:absolute;width:1px;background:#8a8a8a}
 #diag .sl{position:absolute;height:0;border-top:1px solid #6a6a6a;transform-origin:100% 0}
+#diag .ms{position:absolute;background:#8a8a8a}
+#diag .mn{position:absolute;text-align:center;color:#333;font-weight:600;white-space:nowrap}
 #diag .st{position:absolute;white-space:nowrap;color:#444;transform-origin:50% 50%}
 #diag .bus{position:absolute;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:12px solid var(--lc,#88007c)}
 #diag .bus{position:absolute;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:13px solid var(--lc,#88007c)}
@@ -354,7 +356,7 @@ function nameKey(n){ return cleanName(n).toLowerCase(); }
 function buildStops(arr){
   return arr.map(function(o){
     var id = o.id, c = S.coords.get(id), nm = cleanName(S.names[id] || ("Przystanek " + id));
-    return { id:id, z:nameKey(nm), typ:String(o.typ), wc:o.wc || "", street:"", dz:"", name:nm,
+    return { id:id, z:nameKey(nm), typ:String(o.typ), wc:o.wc || "", min:o.min == null ? null : o.min, street:"", dz:"", name:nm,
              lat: c ? c[0] : null, lon: c ? c[1] : null };
   });
 }
@@ -390,9 +392,9 @@ function loadStatic(){
     Object.keys(d.routes).forEach(function(l){
       d.routes[l].forEach(function(v){
         var o = [];
-        v.stops.forEach(function(st){
+        v.stops.forEach(function(st, j){
           if (!names[st[0]]) return;
-          o.push({ id:st[0], typ:st[1], wc:wcs[st[0]] || "" });
+          o.push({ id:st[0], typ:st[1], wc:wcs[st[0]] || "", min:v.min ? v.min[j] : null });
           var z = nameKey(names[st[0]]);
           (zl[z] = zl[z] || {})[l] = 1;
         });
@@ -554,9 +556,15 @@ function vUrl(val){ var m = /^\{Q(\d)\}(.+)$/.exec(val); return m ? VOICE.cat.ba
 function vSnd(label){ var v = VOICE.cat.sounds[label]; return v ? vUrl(v) : null; }
 function vStop(name){
   if (!VOICE.idx) { VOICE.idx = {}; Object.keys(VOICE.cat.stops).forEach(function(k){ VOICE.idx[nk(k)] = VOICE.cat.stops[k]; }); }
-  var v = VOICE.idx[nk(name)] || VOICE.idx[nk(String(name).replace(/\s*\(.*?\)\s*/g, ""))];
-  return v ? vUrl(v) : null;
+  var base = String(name), plain = base.replace(/\s*\(.*?\)\s*/g, " ").trim(), tries = [], al = VOICE.alias || {};
+  [base, plain].forEach(function(x){ var a = al[nk(x)]; if (a) tries.push(a); });
+  tries.push(base, plain);
+  var w = plain.split(/\s+/);                                          // np. "Ząbki Maczka" -> "Maczka" (nagrania często bez nazwy miejscowości)
+  for (var i = 1; i < w.length; i++) tries.push(w.slice(i).join(" "));
+  for (var j = 0; j < tries.length; j++) { var v = VOICE.idx[nk(tries[j])]; if (v) return vUrl(v); }
+  return null;
 }
+function voiceAliases(){ return fetch("zapowiedzi_aliasy.json").then(function(r){ return r.ok ? r.json() : {}; }).catch(function(){ return {}; }).then(function(a){ VOICE.alias = {}; Object.keys(a || {}).forEach(function(k){ VOICE.alias[nk(k)] = a[k]; }); }); }
 function voicePlay(){
   if (!VOICE.audio) {
     VOICE.audio = new Audio();
@@ -608,7 +616,7 @@ function voiceCheck(v){
 function voiceToggle(){
   if (!$("voice").checked) { VOICE.queue = []; if (VOICE.audio) VOICE.audio.pause(); return; }
   if (VOICE.cat) { announce(S.view); return; }
-  fetch("zapowiedzi.json").then(function(r){ return r.json(); }).then(function(c){ VOICE.cat = c; announce(S.view); })
+  fetch("zapowiedzi.json").then(function(r){ return r.json(); }).then(function(c){ VOICE.cat = c; return voiceAliases(); }).then(function(){ announce(S.view); })
     .catch(function(){ $("voice").checked = false; voiceStatus("Nie udało się wczytać zapowiedzi.json (czy plik leży obok strony i działa serwer?).", true); });
 }
 
@@ -666,6 +674,19 @@ function drawDiag(v, T){
     g0 = g1 + 1;
   }
 
+  // pas minut od pierwszego przystanku (jak na wyświetlaczu): kreski między przystankami i etykiety 0' 2' 3' ...
+  if (v.stops.every(function(s){ return s.min != null; })) {
+    var m0 = v.stops[0].min, MF = Math.round(12.5 * k), MY = STRIP_Y - 1, MH = BAR_Y - MY;
+    for (var mi = 0; mi <= n; mi++) {
+      var mx = mi === 0 ? barL : mi === n ? barR : (xOf(mi - 1) + xOf(mi)) / 2;
+      box("ms", mx, MY, 1, MH);
+    }
+    v.stops.forEach(function(s2, i2){
+      var ml = box("mn", xOf(i2) - 20, MY, 40, MH, "font-size:" + MF + "px;line-height:" + MH + "px");
+      ml.textContent = (s2.min - m0) + "'";
+    });
+  }
+
   // kółka: z kropką = zwykły przystanek, puste = na żądanie; końcowe nieco większe
   v.stops.forEach(function(s, i){
     var x = xOf(i), passed = i < cur, end = i === 0 || i === n - 1, nz = s.typ === "2";
@@ -703,6 +724,12 @@ function drawDiag(v, T){
       var dc = 56, cx = (sg.xa + sg.xb) / 2 - dc, cy = ye + dc;
       var tx = box("st", cx, cy, 0, 0); tx.style.width = "auto"; tx.style.fontSize = SF + "px"; if (t > 0.3) tx.style.fontWeight = 600; tx.textContent = sg.name;
       var sw = tx.scrollWidth, mw = 150, tf = "translate(-50%,-50%) rotate(-45deg)";
+      if (sw > mw && /\s/.test(sg.name)) {                                // długa nazwa: dwie linie, podział przy spacji najbliżej środka
+        var wd = sg.name.split(/\s+/), best = 1, bd = 1e9;
+        for (var wi = 1; wi < wd.length; wi++) { var df = Math.abs(wd.slice(0, wi).join(" ").length - wd.slice(wi).join(" ").length); if (df < bd) { bd = df; best = wi; } }
+        tx.innerHTML = ""; tx.appendChild(document.createTextNode(wd.slice(0, best).join(" "))); tx.appendChild(document.createElement("br")); tx.appendChild(document.createTextNode(wd.slice(best).join(" ")));
+        tx.style.textAlign = "center"; sw = tx.scrollWidth;
+      }
       if (sw > mw) tf += " scaleX(" + Math.max(0.6, mw / sw) + ")";
       tx.style.transform = tf; tx.style.lineHeight = "1.2";
     });
@@ -943,7 +970,7 @@ function fitStage(){
     }).then(function(){
       if (!S.routes) throw new Error($("st1").textContent || "Nie udało się wczytać tras.");
       mark("routes", "ok"); msg.textContent = ""; mark("voice", "run");
-      return fetch("zapowiedzi.json").then(function(r){ return r.json(); }).then(function(c){ VOICE.cat = c; mark("voice", "ok"); }).catch(function(){ mark("voice", "err"); });
+      return fetch("zapowiedzi.json").then(function(r){ return r.json(); }).then(function(c){ VOICE.cat = c; return voiceAliases(); }).then(function(){ mark("voice", "ok"); }).catch(function(){ mark("voice", "err"); });
     }).then(function(){ box.hidden = true; })
     .catch(function(e){
       mark("routes", "err"); msg.textContent = e.message; btns.hidden = false;
