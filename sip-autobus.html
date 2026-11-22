@@ -518,7 +518,7 @@ function transHtml(tr){ return tr.map(function(g){ return '<img class="ti" src="
 function transfersAt(s, line){
   var set = S.zl && s.z && S.zl[s.z]; if (!set) return [];
   var L = String(line).toUpperCase(), g = { metro:[], tram:[], bus:[] };
-  Object.keys(set).filter(function(x){ return x.toUpperCase() !== L; })
+  Object.keys(set).filter(function(x){ return x.toUpperCase() !== L && !(/^N\d/.test(L) && /^N\d/i.test(x)); })   // linia nocna nie ma przesiadek na inne N
     .sort(function(a, b){ return a.localeCompare(b, "pl", { numeric:true }); })
     .forEach(function(l){ var t = /^\d{1,2}$/.test(l) ? "tram" : /^M\d/i.test(l) ? "metro" : ((S.ltype && S.ltype[l]) || "bus"); (g[t] || g.bus).push(l); });
   var left = 10, out = [];
@@ -543,7 +543,7 @@ setInterval(function(){
 function drawHdr(v){
   var s = v.stops[v.idx], nz = s.typ === "2", h = $("hdr"), tr = transfersAt(s, v.line), LC = (TYPES[v.type] || TYPES.zwykla).dot;
   h.style.transform = "none";
-  h.innerHTML = '<span class="lab"></span><span class="nm"></span>' + arrowSvg(nz, LC) + transHtml(tr);
+  h.innerHTML = '<span class="lab"></span><span class="nm"></span>' + (tr.length ? arrowSvg(nz, LC) + transHtml(tr) : "");
   h.children[0].textContent = hdrLabel(v, nz);
   var nm = h.children[1]; nm.textContent = s.name; nm.style.color = LC;
   var w = h.scrollWidth, sc = w > 1190 ? 1190 / w : 1;
