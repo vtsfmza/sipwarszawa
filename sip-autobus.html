@@ -115,6 +115,27 @@ h2{margin:0 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;
 kbd{font:12px ui-monospace,Menlo,Consolas,monospace;border:1px solid var(--line);border-radius:3px;padding:0 4px;background:var(--field)}
 .radio{display:flex;gap:14px;flex-wrap:wrap}
 .radio label{flex-direction:row;align-items:center;gap:6px;color:var(--fg);font-size:14px}
+/* kompaktowy panel ustawień: gęstsze odstępy, panele w kolumnach, puste statusy ukryte */
+body{font-size:13px;line-height:1.35}
+.page{padding:8px 12px 12px;gap:8px}
+header{gap:2px 12px}
+h1{font-size:16px}
+.sub{font-size:12px}
+.panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:8px;align-items:start}
+.panel{padding:8px 10px;border-radius:6px}
+.panel.wide{grid-column:1/-1}
+h2{margin:0 0 6px;font-size:10.5px}
+.grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px 10px}
+label{font-size:12px;gap:2px}
+input[type=text],input[type=password],select{padding:4px 7px}
+button{padding:4px 10px}
+.btns{gap:6px}
+.panel .btns[style]{margin-top:6px!important}
+#simBox,#liveBox{margin-top:8px!important}
+.status{font-size:12px;margin-top:4px;min-height:0}
+.status:empty{display:none}
+.radio{gap:10px}
+.radio label{font-size:13px}
 </style>
 </head>
 <body>
@@ -139,6 +160,7 @@ kbd{font:12px ui-monospace,Menlo,Consolas,monospace;border:1px solid var(--line)
     </div>
   </div>
 
+  <div class="panels">
   <section class="panel" aria-labelledby="h-conn">
     <h2 id="h-conn">1. Dane z API</h2>
     <div class="grid">
@@ -210,12 +232,13 @@ kbd{font:12px ui-monospace,Menlo,Consolas,monospace;border:1px solid var(--line)
     </div>
   </section>
 
-  <section class="panel">
+  <section class="panel wide">
     <div class="btns">
       <button id="full">Pełny ekran</button>
       <span class="sub">Podgląd na górze jest skalowany. Pełny ekran daje dokładnie 1920×540 na ekranie tej wielkości.</span>
     </div>
   </section>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
