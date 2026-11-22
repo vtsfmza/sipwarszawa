@@ -240,6 +240,7 @@ button{padding:4px 10px}
         <button id="next" aria-label="Następny krok">Dalej ▶</button>
         <label class="chk"><input type="checkbox" id="auto" checked> Przesuwaj automatycznie</label>
         <label class="chk"><input type="checkbox" id="voice"> Zapowiedzi głosowe</label>
+        <label class="chk"><input type="checkbox" id="voiceName"> Zapowiedź na przystanku: sama nazwa (bez słowa „Przystanek”)</label>
         <div id="voiceSt" class="status"></div>
         <label class="chk"><input type="checkbox" id="infoOn"> Okienko „Informacje” na ekranie</label>
         <textarea id="infoTxt" maxlength="400" rows="2" placeholder="Treść komunikatu, np. Przystanek Dworzec Centralny nieczynny"></textarea>
@@ -731,7 +732,8 @@ function announce(v){
       if (lc.length) { add(vSnd("Linia (WTP)")); lc.forEach(add); } else miss.push("linia " + v.line);   // bez nagrania numeru nie mówimy samego „Linia”
       add(vSnd("Kierunek (WTP)")); name(v.stops[v.stops.length - 1]);
     }
-    add(vSnd("Przystanek (WTP)")); name(s);                           // "Przystanek: <nazwa>", a na żądanie dopiero po nazwie
+    if (!($("voiceName") && $("voiceName").checked)) add(vSnd("Przystanek (WTP)"));   // domyślnie "Przystanek: <nazwa>"; z opcją „sama nazwa” tylko <nazwa>
+    name(s);                                                          // na żądanie dopiero po nazwie
     if (nz) add(vSnd("Przystanek na Żądanie (WTP)"));
     if (last) add(vSnd("Przystanek końcowy, prosimy o opuszczenie pojazdu (WTP)"));
   } else {
@@ -1176,6 +1178,8 @@ function fitStage(){
   $("startLive").addEventListener("click", startLive);
   $("stopLive").addEventListener("click", function(){ stopLive(); setStatus("st3", "Zatrzymano odświeżanie."); });
   $("voice").addEventListener("change", voiceToggle);
+  try { var vq = new URLSearchParams(location.search).get("voicename"); $("voiceName").checked = vq === "1" || (vq !== "0" && localStorage.getItem("sip_voicename") === "1"); } catch(e){}
+  $("voiceName").addEventListener("change", function(){ try { localStorage.setItem("sip_voicename", $("voiceName").checked ? "1" : "0"); } catch(e){} });
   $("gtfsFetch").addEventListener("click", gtfsFetch);
   $("gtfsFile").addEventListener("change", gtfsFile);
   $("openSide").addEventListener("click", function(){ window.open("sip-boczny.html", "sip_boczny"); });
