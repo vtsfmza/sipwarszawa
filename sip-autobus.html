@@ -787,7 +787,7 @@ function sipPublish(v){
 // pas na minuty, czerwony pasek z dzielnicami, pod nim ukośne kreski z ulicami
 function drawDiag(v, T){
   var el = $("diag"); el.innerHTML = "";
-  var n = v.stops.length, CX = 1049, SPMIN = 32, LMAX = 1330, GB = 84, cur = v.idx;
+  var n = v.stops.length, CX = 1049, SPMIN = 32, LMAX = 1330, GB = 190, cur = v.idx;
   var W = Math.min(LMAX, 1025 + 6.7 * n), sp = n > 1 ? Math.min(200, W / (n - 1)) : 0;
   // Zbyt długa trasa: skala się nie zmienia (rozstaw min. SPMIN). Pierwszy przystanek zostaje po lewej, przejechany odcinek zwija się
   // w szary pasek ">>>", a gdy reszta się nie mieści, zwija się też koniec (pasek przed przystankiem końcowym). Gdy całość mieści się bez nakładania, paski znikają.
