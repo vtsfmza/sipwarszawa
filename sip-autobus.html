@@ -55,6 +55,7 @@ h1{margin:0;font-size:20px;font-weight:700}
 #diag .nm.cur{color:var(--lc,#88007c)!important;font-weight:700!important}
 #diag .bar{position:absolute;background:#d3232f}
 #diag .gap{position:absolute;width:2px;background:#fff}
+#diag .nm .zz{font-weight:700;flex:none}
 #diag .nm img{position:static;display:inline-block;height:1.25em;vertical-align:middle;margin-left:5px}
 #diag .dz{position:absolute;color:#fff;font-weight:600;text-align:center;white-space:nowrap;overflow:hidden}
 #diag .strip{position:absolute;background:rgba(255,255,255,.92)}
@@ -64,6 +65,21 @@ h1{margin:0;font-size:20px;font-weight:700}
 #diag .bus{position:absolute;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:12px solid var(--lc,#88007c)}
 #diag .bus{position:absolute;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:13px solid var(--lc,#88007c)}
 #foot{position:absolute;right:38px;bottom:12px;display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;color:#333;white-space:nowrap}
+#boot{position:fixed;inset:0;z-index:1000;background:#14101c;color:#fff;display:flex;align-items:center;justify-content:center;font-family:Frutiger,Arial,sans-serif}
+#boot[hidden]{display:none}
+#boot .boxb{width:min(520px,90vw);text-align:center}
+#boot h2{margin:18px 0 14px;font-size:28px;font-weight:600}
+#boot .spin{width:54px;height:54px;margin:0 auto;border:6px solid #3a2b4d;border-top-color:#c04bb5;border-radius:50%;animation:bsp 0.9s linear infinite}
+@keyframes bsp{to{transform:rotate(360deg)}}
+#boot ul{list-style:none;margin:0 0 12px;padding:0;text-align:left;font-size:17px}
+#boot li{padding:5px 0 5px 30px;position:relative;color:#bbb}
+#boot li::before{content:"○";position:absolute;left:4px}
+#boot li.run{color:#fff}#boot li.run::before{content:"◔"}
+#boot li.ok{color:#8fe08f}#boot li.ok::before{content:"✓"}
+#boot li.err{color:#ff8a8a}#boot li.err::before{content:"✗"}
+#boot p{min-height:1.4em;color:#bbb;font-size:15px;margin:0 0 10px}
+#boot button{font:inherit;padding:9px 16px;border-radius:8px;border:1px solid #666;background:#2a2238;color:#fff;cursor:pointer;margin:4px}
+#boot button.primary{background:#88007c;border-color:#88007c}
 #hdr{position:absolute;left:640px;top:14px;height:62px;display:flex;align-items:center;white-space:nowrap;transform-origin:0 50%}
 #hdr .lab{font-size:31px;font-weight:300;color:#4a4a4a;margin-right:12px}
 #hdr .nm{font-size:46px;font-weight:700}
@@ -168,6 +184,7 @@ kbd{font:12px ui-monospace,Menlo,Consolas,monospace;border:1px solid var(--line)
         <button id="next" aria-label="Następny krok">Dalej ▶</button>
         <label class="chk"><input type="checkbox" id="auto" checked> Przesuwaj automatycznie</label>
         <label class="chk"><input type="checkbox" id="voice"> Zapowiedzi głosowe</label>
+        <div id="voiceSt" class="status"></div>
         <span class="sub">Strzałki <kbd>←</kbd> <kbd>→</kbd> działają też z klawiatury.</span>
       </div>
     </div>
@@ -506,10 +523,21 @@ function vStop(name){
   return v ? vUrl(v) : null;
 }
 function voicePlay(){
-  if (!VOICE.audio) { VOICE.audio = new Audio(); VOICE.audio.onended = voicePlay; VOICE.audio.onerror = voicePlay; }
+  if (!VOICE.audio) {
+    VOICE.audio = new Audio();
+    VOICE.audio.onended = voicePlay;
+    VOICE.audio.onerror = function(){ voiceStatus("Nie wczytano nagrania: " + decodeURIComponent(String(VOICE.audio.src).replace(/^.*gtfscc\.github\.io\//, "")), true); voicePlay(); };
+  }
   var u = VOICE.queue.shift(); if (!u) return;
-  VOICE.audio.src = u; var p = VOICE.audio.play(); if (p && p.catch) p.catch(function(){ voicePlay(); });
+  VOICE.audio.src = u;
+  var p = VOICE.audio.play();
+  if (p && p.catch) p.catch(function(e){
+    if (e && e.name === "NotAllowedError") { voiceStatus("Przeglądarka zablokowała dźwięk – kliknij gdziekolwiek na stronie i zaznacz zapowiedzi jeszcze raz.", true); VOICE.queue = []; }
+    else if (!(e && e.name === "AbortError")) voicePlay();
+  });
+  else voiceStatus("Odtwarzanie: " + decodeURIComponent(u.replace(/^.*gtfscc\.github\.io\//, "")));
 }
+function voiceStatus(msg, err){ var el = $("voiceSt"); if (el) { el.textContent = msg; el.className = "status" + (err ? " err" : ""); } if (err) console.warn(msg); }
 function announce(v){
   if (!VOICE.cat || v.mode !== "run" || !v.stops.length) return;
   var s = v.stops[v.idx], last = v.idx === v.stops.length - 1, nz = s.typ === "2", q = [], miss = [];
@@ -531,6 +559,7 @@ function announce(v){
   }
   if (miss.length) console.warn("Brak nagrania nazwy przystanku:", miss.join(", "));
   VOICE.queue = q;
+  if (!q.length) { voiceStatus("Brak nagrań dla tego przystanku w banku zapowiedzi.", true); return; }
   if (VOICE.audio) VOICE.audio.pause();
   voicePlay();
 }
@@ -544,7 +573,7 @@ function voiceToggle(){
   if (!$("voice").checked) { VOICE.queue = []; if (VOICE.audio) VOICE.audio.pause(); return; }
   if (VOICE.cat) { announce(S.view); return; }
   fetch("zapowiedzi.json").then(function(r){ return r.json(); }).then(function(c){ VOICE.cat = c; announce(S.view); })
-    .catch(function(){ $("voice").checked = false; alert("Nie udało się wczytać zapowiedzi.json (czy plik leży obok strony i działa serwer?)."); });
+    .catch(function(){ $("voice").checked = false; voiceStatus("Nie udało się wczytać zapowiedzi.json (czy plik leży obok strony i działa serwer?).", true); });
 }
 
 function render(){
@@ -611,13 +640,14 @@ function drawDiag(v, T){
     var f = (end ? font * 1.1 : font), bh = Math.round(f * 1.35);
     var nm = box("nm" + (passed ? " past" : "") + (end && !passed ? " end" : "") + (i === cur ? " cur" : ""), x - 3 + (bh / 2) * Math.sin(rad), Y - 11 - bh, 0, bh);
     nm.style.width = "auto"; nm.style.lineHeight = bh + "px"; nm.style.fontSize = f + "px";
-    nm.textContent = s.name + (nz ? " (Ż)" : "");
+    var tn = document.createElement("span"); tn.className = "tn"; tn.textContent = s.name; nm.appendChild(tn);
+    if (nz) { var zs = document.createElement("span"); zs.className = "zz"; zs.textContent = " (Ż)"; nm.appendChild(zs); }
     if (s.wc) { var im = document.createElement("img"); im.src = "img/wheelchair_" + s.wc + ".png"; im.alt = ""; nm.appendChild(im); }
     if (t > 0.3 && !passed) nm.style.fontWeight = 600;
     var room = Math.min((1905 - x) / Math.cos(rad), (Y - 11 - 105) / Math.sin(rad)), maxW = Math.max(60, Math.min(300, room)), tf = "rotate(-" + ang + "deg)";
     if (nm.scrollWidth > maxW) {
       var sx = Math.max(0.6, maxW / nm.scrollWidth); tf += " scaleX(" + sx + ")";
-      if (nm.scrollWidth * sx > maxW) { nm.style.maxWidth = (maxW / sx) + "px"; nm.style.overflow = "hidden"; nm.style.textOverflow = "ellipsis"; }
+      if (nm.scrollWidth * sx > maxW) { var extra = nm.scrollWidth - tn.offsetWidth; tn.style.display = "inline-block"; tn.style.verticalAlign = "bottom"; tn.style.overflow = "hidden"; tn.style.textOverflow = "ellipsis"; tn.style.maxWidth = Math.max(40, maxW / sx - extra) + "px"; }
     }
     nm.style.transform = tf;
   });
@@ -861,6 +891,33 @@ function fitStage(){
     if (e.key === "ArrowRight") { stepSim(1); schedSim(); } else if (e.key === "ArrowLeft") { stepSim(-1); schedSim(); }
   });
 
+  // ---- ekran ładowania: klucz API, trasy, katalog zapowiedzi ----
+  function bootRun(){
+    var box = $("boot"), ul = $("bootSteps"), msg = $("bootMsg"), btns = $("bootBtns");
+    if (!/^https?:$/.test(location.protocol)) return;          // z pliku (file://) nie ma serwera, więc bez ekranu ładowania
+    var steps = [["key", "Klucz API"], ["routes", "Trasy i przystanki (GTFS)"], ["voice", "Zapowiedzi głosowe"]];
+    ul.innerHTML = ""; steps.forEach(function(st){ var li = document.createElement("li"); li.id = "bs_" + st[0]; li.textContent = st[1]; ul.appendChild(li); });
+    function mark(id, cls){ $("bs_" + id).className = cls; }
+    box.hidden = false; btns.hidden = true; msg.textContent = "";
+    mark("key", "run");
+    fetch("api/token").then(function(r){ return r.ok ? r.json() : {}; }).catch(function(){ return {}; }).then(function(j){
+      if (j && j.token && !$("apiKey").value.trim()) $("apiKey").value = j.token;
+      mark("key", $("apiKey").value.trim() ? "ok" : "err");
+      mark("routes", "run"); msg.textContent = "Pierwsze uruchomienie może potrwać do kilku minut (serwer pobiera i przetwarza dane GTFS).";
+      return loadStatic();
+    }).then(function(){
+      if (!S.routes) throw new Error($("st1").textContent || "Nie udało się wczytać tras.");
+      mark("routes", "ok"); msg.textContent = ""; mark("voice", "run");
+      return fetch("zapowiedzi.json").then(function(r){ return r.json(); }).then(function(c){ VOICE.cat = c; mark("voice", "ok"); }).catch(function(){ mark("voice", "err"); });
+    }).then(function(){ box.hidden = true; })
+    .catch(function(e){
+      mark("routes", "err"); msg.textContent = e.message; btns.hidden = false;
+    });
+    $("bootRetry").onclick = bootRun;
+    $("bootSkip").onclick = function(){ box.hidden = true; };
+  }
+  window.addEventListener("load", function(){ setTimeout(bootRun, 50); });
+
   var P = new URLSearchParams(location.search);
   if (CONFIG.key && !$("apiKey").value) { $("apiKey").value = CONFIG.key; $("saveKey").checked = true; }
   ["line"].forEach(function(f){ if (CONFIG[f] && !P.get(f)) $(f).value = CONFIG[f]; });
@@ -910,5 +967,14 @@ function fitStage(){
 })();
 })();
 </script>
+<div id="boot" hidden>
+  <div class="boxb">
+    <div class="spin"></div>
+    <h2>SIP Autobus</h2>
+    <ul id="bootSteps"></ul>
+    <p id="bootMsg"></p>
+    <div id="bootBtns" hidden><button class="primary" id="bootRetry">Spróbuj ponownie</button> <button id="bootSkip">Kontynuuj bez danych</button></div>
+  </div>
+</div>
 </body>
 </html>

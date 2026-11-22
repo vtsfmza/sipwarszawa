@@ -228,6 +228,18 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        base = os.path.basename(self.path.split("?")[0]).lower()
+        if base in ("api_token.txt", ".env", "serve.py", "geo_cache.sqlite") or base.startswith(".git"):
+            return self.send_error(404)
+        if self.path.split("?")[0] == "/api/token":
+            tok = os.environ.get("SIP_TOKEN", "").strip()
+            if not tok:
+                try:
+                    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "api_token.txt"), encoding="utf-8") as f:
+                        tok = next((l.strip() for l in f if l.strip() and not l.startswith("#")), "")
+                except OSError:
+                    tok = ""
+            return self._send(200, json.dumps({"token": tok}).encode("utf-8"), "application/json")
         if self.path.split("?")[0] == "/api/geo":
             ids = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("ids", [""])[0].split(",")
             geo, pending = geo_lookup([i for i in ids if i][:200])

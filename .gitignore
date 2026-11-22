@@ -1,3 +1,4 @@
-gtfs-cache.json
 __pycache__/
+api_token.txt
 geo_cache.sqlite*
+gtfs-cache.json
