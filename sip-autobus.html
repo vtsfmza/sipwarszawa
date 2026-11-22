@@ -82,7 +82,8 @@ h1{margin:0;font-size:20px;font-weight:700}
 #boot p{min-height:1.4em;color:#bbb;font-size:15px;margin:0 0 10px}
 #boot button{font:inherit;padding:9px 16px;border-radius:8px;border:1px solid #666;background:#2a2238;color:#fff;cursor:pointer;margin:4px}
 #boot button.primary{background:#88007c;border-color:#88007c}
-#hdr{position:absolute;left:640px;top:14px;height:62px;display:flex;align-items:center;white-space:nowrap;transform-origin:0 50%}
+#hdr{position:absolute;left:640px;top:9px;height:62px;display:flex;align-items:baseline;line-height:62px;white-space:nowrap;transform-origin:0 50%}
+#hdr svg,#hdr .ti,#hdr .tr{align-self:center}
 #hdr .lab{font-size:31px;font-weight:300;color:#4a4a4a;margin-right:12px}
 #hdr .nm{font-size:46px;font-weight:700}
 #hdr .ti{position:static;width:26px;height:26px;margin-left:22px}
@@ -734,7 +735,6 @@ function drawDiag(v, T){
       tx.style.transform = tf; tx.style.lineHeight = "1.2";
     });
   }
-  if (!v.atStop && cur > 0) box("bus", (xOf(cur - 1) + xOf(cur)) / 2 - 8, Y + 12, 0, 0);
 }
 var DAYS = ["niedz.", "pon.", "wt.", "śr.", "czw.", "pt.", "sob."];
 function tickClock(){
