@@ -14,8 +14,3 @@ Stare API `api.um.warszawa.pl` jest wyłączone; nazw ulic nie ma w GTFS, więc 
 
 ## Kolory linii
 Kolor numeru, trasy, kropek, strzałki i znacznika autobusu zależy od typu linii: zwykła/okresowa/specjalna – czarny, przyspieszona – czerwony, strefowa – zielony, nocna – fioletowy.
-
-## GitHub Pages
-Strona publikuje się sama (workflow `.github/workflows/pages.yml`, przy każdym pushu i codziennie o 3:17 UTC, wtedy też odświeżają się trasy z GTFS).
-Adres: https://vtsfmza.github.io/sipwarszawa/
-Tryb symulacji działa od razu. Tryb „na żywo” potrzebuje proxy CORS: wgraj `worker.js` jako Cloudflare Worker i otwórz stronę z `?api=https://TWOJ-WORKER.workers.dev/api/action/` (możesz też wpisać adres w `CONFIG.api`).
