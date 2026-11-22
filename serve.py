@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""Lokalny serwer dla sip-autobus.html.
+Serwuje plik z tego katalogu i przekazuje zapytania /api/action/... (GET i POST, razem z nagłówkiem
+Authorization) do API m.st. Warszawy, dzięki czemu przeglądarka nie blokuje ich przez CORS.
+
+  py serve.py            # port 8000 (Windows)   |   python3 serve.py
+  py serve.py 8080       # inny port
+
+Potem otwórz:  http://localhost:8000/sip-autobus.html
+Kiosk:         http://localhost:8000/sip-autobus.html?kiosk=1&line=197&live=1&brig=12
+Trasy i przystanki serwer buduje z GTFS (mkuran.pl/gtfs/warsaw.zip), bo stare API tras (api.um.warszawa.pl)
+zostalo wylaczone. Wynik jest cache'owany w pliku gtfs-cache.json (odswiezany co 24 h).
+"""
+import os, sys, io, csv, json, time, zipfile, tempfile, threading, urllib.request, urllib.error
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+UPSTREAMS = [u.strip().rstrip("/") for u in os.environ.get(
+    "SIP_UPSTREAM", "https://dane.um.warszawa.pl").split(",") if u.strip()]
+
+
+# ---------- trasy z GTFS (zastepuja wylaczone public_transport_routes) ----------
+GTFS_URL = os.environ.get("SIP_GTFS", "https://mkuran.pl/gtfs/warsaw.zip")
+CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gtfs-cache.json")
+CACHE_TTL = 24 * 3600
+MAX_VARIANTS = 6          # najczestsze sekwencje przystankow na kierunek
+_lock = threading.Lock()
+
+def _rows(zf, name):
+    with zf.open(name) as f:
+        yield from csv.DictReader(io.TextIOWrapper(f, encoding="utf-8-sig", newline=""))
+
+def build_routes(zip_path):
+    """Z GTFS robi {stops:{id:[nazwa,lat,lon]}, routes:{linia:[{code,dir,headsign,stops:[[id,typ],..]}]}}."""
+    with zipfile.ZipFile(zip_path) as zf:
+        route_name = {r["route_id"]: r.get("route_short_name") or r["route_id"] for r in _rows(zf, "routes.txt")}
+        trips = {}
+        for t in _rows(zf, "trips.txt"):
+            trips[t["trip_id"]] = (route_name.get(t["route_id"], t["route_id"]), t.get("direction_id") or "0",
+                                   t.get("trip_headsign") or "")
+        stops = {}
+        for s in _rows(zf, "stops.txt"):
+            try:
+                stops[s["stop_id"]] = [s.get("stop_name", ""), round(float(s["stop_lat"]), 6), round(float(s["stop_lon"]), 6)]
+            except (ValueError, KeyError):
+                pass
+        seqs = {}                         # (linia, kierunek) -> {(sekwencja): [licznik, headsign]}
+        cur, buf = None, []
+
+        def flush():
+            if cur is None or cur not in trips or not buf:
+                return
+            buf.sort(key=lambda x: x[0])
+            sig = tuple((sid, "2" if ond else "1") for _, sid, ond in buf)
+            line, d, head = trips[cur]
+            e = seqs.setdefault((line, d), {}).setdefault(sig, [0, head])
+            e[0] += 1
+
+        for r in _rows(zf, "stop_times.txt"):
+            if r["trip_id"] != cur:
+                flush(); cur, buf = r["trip_id"], []
+            try:
+                seq = int(r["stop_sequence"])
+            except ValueError:
+                continue
+            buf.append((seq, r["stop_id"], (r.get("pickup_type") == "3" or r.get("drop_off_type") == "3")))
+        flush()
+    routes, used = {}, set()
+    for (line, d), vs in seqs.items():
+        best = sorted(vs.items(), key=lambda kv: -kv[1][0])[:MAX_VARIANTS]
+        for n, (sig, (cnt, head)) in enumerate(best, 1):
+            routes.setdefault(line, []).append({"code": "%s%d" % ("A" if d == "0" else "B", n), "dir": int(d),
+                                                "headsign": head, "stops": [list(x) for x in sig]})
+            used.update(x[0] for x in sig)
+    for l in routes:
+        routes[l].sort(key=lambda v: v["code"])
+    return {"built": int(time.time()), "stops": {k: v for k, v in stops.items() if k in used}, "routes": routes}
+
+def get_routes_json():
+    with _lock:
+        try:
+            if time.time() - os.path.getmtime(CACHE) < CACHE_TTL:
+                with open(CACHE, "rb") as f:
+                    return f.read()
+        except OSError:
+            pass
+        print("Pobieram GTFS z %s ..." % GTFS_URL, flush=True)
+        tmp = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
+        try:
+            req = urllib.request.Request(GTFS_URL, headers={"User-Agent": "sip-autobus"})
+            with urllib.request.urlopen(req, timeout=120) as r:
+                while True:
+                    ch = r.read(1 << 20)
+                    if not ch:
+                        break
+                    tmp.write(ch)
+            tmp.close()
+            data = json.dumps(build_routes(tmp.name), ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            with open(CACHE, "wb") as f:
+                f.write(data)
+            print("GTFS gotowy (%d KB)." % (len(data) // 1024), flush=True)
+            return data
+        except Exception as e:
+            try:
+                with open(CACHE, "rb") as f:        # przeterminowany cache lepszy niz nic
+                    print("GTFS: blad pobierania (%s), uzywam starego cache." % e, flush=True)
+                    return f.read()
+            except OSError:
+                raise e
+        finally:
+            try:
+                tmp.close(); os.unlink(tmp.name)
+            except OSError:
+                pass
+
+class Handler(SimpleHTTPRequestHandler):
+    def _proxy(self, method):
+        body = None
+        if method == "POST":
+            n = int(self.headers.get("Content-Length") or 0)
+            body = self.rfile.read(n) if n else b""
+        last = None
+        for up in UPSTREAMS:
+            headers = {"User-Agent": "sip-autobus"}
+            for h in ("Authorization", "Content-Type"):
+                if self.headers.get(h):
+                    headers[h] = self.headers[h]
+            try:
+                req = urllib.request.Request(up + self.path, data=body, headers=headers, method=method)
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    return self._send(r.status, r.read(), r.headers.get("Content-Type", "application/json"))
+            except urllib.error.HTTPError as e:
+                data = e.read()
+                if e.code in (404, 502, 503):      # spróbuj następnego adresu
+                    last = e
+                    continue
+                return self._send(e.code, data, e.headers.get("Content-Type", "application/json"))
+            except Exception as e:
+                last = e
+        self.send_error(502, "Nie udalo sie polaczyc z API: %s" % last)
+
+    def _send(self, code, data, ctype):
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_GET(self):
+        if self.path.startswith("/api/"):
+            return self._proxy("GET")
+        if self.path.split("?")[0] == "/gtfs/routes.json":
+            try:
+                return self._send(200, get_routes_json(), "application/json; charset=utf-8")
+            except Exception as e:
+                return self._send(502, json.dumps({"error": "Nie udalo sie pobrac GTFS: %s" % e}).encode("utf-8"), "application/json")
+        return super().do_GET()
+
+    def do_POST(self):
+        if self.path.startswith("/api/"):
+            return self._proxy("POST")
+        self.send_error(405)
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.end_headers()
+
+    def log_message(self, fmt, *args):  # bez klucza API w logach
+        print("%s %s" % (self.address_string(), (fmt % args).split("?")[0]))
+
+if __name__ == "__main__":
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+    print("SIP: http://localhost:%d/sip-autobus.html   (API przez: %s)" % (port, ", ".join(UPSTREAMS)))
+    ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
