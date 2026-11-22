@@ -641,7 +641,7 @@ function drawDiag(v, T){
   W = sp * (n - 1);
   var x0 = CX - W / 2;
   var t = Math.max(0, Math.min(1, (sp - 48) / 131));            // 0 = gęsta trasa, 1 = krótka trasa (większe elementy)
-  var k = 1 + 0.12 * t, Y = 299 + 28 * t, STRIP_Y = Y + 11, BAR_Y = Y + 22, BAR_H = Math.round(24 * k), ye = BAR_Y + BAR_H;
+  var k = 1 + 0.12 * t, Y = 299 + 28 * t, STRIP_Y = Y + 11, BAR_Y = Y + 33, BAR_H = Math.round(24 * k), ye = BAR_Y + BAR_H;
   var font = sp <= 48 ? 13.8 + 4 * Math.max(0, sp - 32) / 16 : 17.8 - 2.8 * Math.min(1, (sp - 48) / 131);
   var ang = Math.max(45, Math.min(75, Math.asin(Math.min(1, font * 1.2 / Math.max(sp, 1))) * 180 / Math.PI));
   var rad = ang * Math.PI / 180, cur = v.idx;
@@ -662,6 +662,7 @@ function drawDiag(v, T){
   var segs = [], a0 = 0;
   for (var q2 = 1; q2 <= n; q2++) if (q2 === n || st[q2] !== st[a0]) { segs.push({ a:a0, b:q2 - 1, name:st[a0] }); a0 = q2; }
   var haveStreets = st.some(function(x){ return x; });
+  var hasMinutes = v.stops.every(function(s){ return s.min != null; });
     box("bar", barL, BAR_Y, barR - barL, BAR_H);
 
   // dzielnice na pasku
@@ -678,10 +679,7 @@ function drawDiag(v, T){
   // pas minut od pierwszego przystanku (jak na wyświetlaczu): kreski między przystankami i etykiety 0' 2' 3' ...
   if (v.stops.every(function(s){ return s.min != null; })) {
     var m0 = v.stops[0].min, MF = Math.round(12.5 * k), MY = STRIP_Y - 1, MH = BAR_Y - MY;
-    for (var mi = 0; mi <= n; mi++) {
-      var mx = mi === 0 ? barL : mi === n ? barR : (xOf(mi - 1) + xOf(mi)) / 2;
-      box("ms", mx, MY, 1, MH);
-    }
+    var hasMin = true;
     v.stops.forEach(function(s2, i2){
       var ml = box("mn", xOf(i2) - 20, MY, 40, MH, "font-size:" + MF + "px;line-height:" + MH + "px");
       ml.textContent = (s2.min - m0) + "'";
@@ -717,6 +715,11 @@ function drawDiag(v, T){
       if (xb - xa < 26) return;
       kept.push({ xa:xa, xb:xb, name:sg.name });
     });
+    if (hasMinutes) {                                                    // kreski w pasie minut tylko tam, gdzie zaczyna się nowa ulica
+      var MY2 = STRIP_Y - 1;
+      kept.forEach(function(sg){ box("ms", sg.xa, MY2, 1, BAR_Y - MY2); });
+      if (kept.length) box("ms", kept[kept.length - 1].xb, MY2, 1, BAR_Y - MY2);
+    }
     kept.forEach(function(sg, idx){
       var last = idx === kept.length - 1;
       var xe = sg.xb;                                                   // kreska kończąca odcinek
