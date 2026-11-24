@@ -40,7 +40,7 @@ h1{margin:0;font-size:20px;font-weight:700}
 #stage .t{position:absolute;white-space:nowrap}
 #bg{left:0;top:0;width:1920px;height:540px}
 #strip{left:0;top:190px;width:1563px;height:77px;mix-blend-mode:darken}
-#num{position:absolute;left:151px;top:16px;width:205px;height:103px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:86px;line-height:1}
+#num{position:absolute;left:151px;top:16px;width:205px;height:103px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:87px;letter-spacing:-1.5px;line-height:1}
 #num span{display:inline-block;transform-origin:center}
 #dest{left:380px;top:12px;height:58px;line-height:58px;font-size:54px;font-weight:600}
 #name{left:700px;top:190px;height:77px;line-height:77px;font-size:62px;font-weight:600}
@@ -320,13 +320,13 @@ var API = "https://dane.um.warszawa.pl/api/action/";
 // ---------- Typy linii ----------
 var TYPES = {
   zwykla:{ label:"Zwykła", bg:"img/zwykla.png", num:"#262626", dot:"#88007c" },
-  przyspieszona:{ label:"Przyspieszona", bg:IMG.przyspieszona, num:"#a13032", dot:"#88007c" },
+  przyspieszona:{ label:"Przyspieszona", bg:IMG.przyspieszona, num:"#cc0000", dot:"#88007c" },
   nocna:{ label:"Nocna", bg:IMG.nocna, num:"#ffffff", dot:"#88007c" },
   strefowa:{ label:"Strefowa", bg:IMG.strefowa, num:"#1f8f1f", dot:"#88007c" },
   strefowa_okresowa:{ label:"Strefowa okresowa", bg:IMG.strefowa_okresowa, num:"#1f8f1f", dot:"#88007c" },
   okresowa:{ label:"Okresowa", bg:IMG.okresowa, num:"#262626", dot:"#88007c" },
-  okresowa_przyspieszona:{ label:"Okresowa przyspieszona", bg:IMG.okresowa_przyspieszona, num:"#a13032", dot:"#88007c" },
-  specjalna:{ label:"Specjalna", bg:IMG.specjalna, num:"#000000", dot:"#88007c" },
+  okresowa_przyspieszona:{ label:"Okresowa przyspieszona", bg:IMG.okresowa_przyspieszona, num:"#cc0000", dot:"#88007c" },
+  specjalna:{ label:"Specjalna", bg:IMG.specjalna, num:"#cc0000", dot:"#88007c" },
   dwucyfrowa:{ label:"Dwucyfrowa (czerwona)", bg:"img/zwykla_czerwona.png", num:"#262626", dot:"#a13032" }
 };
 // Ustalenie typu po numerze to przybliżenie; zawsze można wskazać typ ręcznie.
@@ -802,7 +802,7 @@ function render(){
   if (standby) { $("bg").src = IMG.standby; zoneStatus(null); sipPublish(null); return; }
   $("bg").src = T.bg;
   var num = $("num"); num.style.color = T.num; $("diag").style.setProperty("--lc", T.dot);
-  var ns = num.firstChild; ns.textContent = v.line; fit(ns, 190, 86); ns.style.transformOrigin = "center";
+  var ns = num.firstChild; ns.textContent = v.line; fit(ns, 190, 87); ns.style.transformOrigin = "center";
   drawHdr(v); drawDiag(v, T); zoneStatus(v.stops); sipPublish(v); voiceCheck(v);
 }
 // Ulice trasy (wygładzone: pojedynczy przystanek na innej ulicy nie tworzy odcinka). Używa tego pasek ulic i tablica boczna.
