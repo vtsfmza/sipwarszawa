@@ -281,6 +281,7 @@ textarea#infoTxt{margin-top:6px}
     <div class="btns">
       <button id="full">Pełny ekran</button>
       <button id="openSide" title="Otwiera tablicę boczną w nowej karcie; pokazuje tę samą linię, cel i ulice trasy">Tablica boczna ↗</button>
+      <button id="openCeil" title="Otwiera podsufitkę w nowej karcie; pokazuje tę samą linię, cel, trasę i bieżący przystanek">Podsufitka ↗</button>
     </div>
     <label class="chk" style="margin-top:8px"><input type="checkbox" id="hdrName"> Nagłówek: sama nazwa przystanku (bez „PRZYSTANEK:”)</label>
     <label class="chk" style="margin-top:4px"><input type="checkbox" id="infoOn"> Okienko „Informacje” na ekranie</label>
@@ -1223,6 +1224,7 @@ function fitStage(){
   $("gtfsFetch").addEventListener("click", gtfsFetch);
   $("gtfsFile").addEventListener("change", gtfsFile);
   $("openSide").addEventListener("click", function(){ window.open("sip-boczny.html", "sip_boczny"); });
+  $("openCeil").addEventListener("click", function(){ window.open("sip-podsufitka.html", "sip_podsufitka"); });
   $("full").addEventListener("click", function(){ var w = $("wrap"); if (document.fullscreenElement) document.exitFullscreen(); else if (w.requestFullscreen) w.requestFullscreen(); });
   document.addEventListener("fullscreenchange", fitStage);
   window.addEventListener("resize", fitStage);

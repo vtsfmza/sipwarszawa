@@ -27,41 +27,37 @@ button{background:transparent;cursor:pointer}
 #stage{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;background:#0a0d16;overflow:hidden;
   font-family:"Segoe UI","Frutiger","Open Sans","Noto Sans",Arial,sans-serif;color:#fff}
 
-/* nagłówek z linią: numer + przewijane cel i trasa */
-#hdr{position:absolute;left:0;top:0;width:1280px;height:170px;background:linear-gradient(#f7f9fc,#d8e0ea);color:#222}
+/* kolor akcentu: autobus = fiolet, SKM = zieleń */
+#stage{--ac:#88007c}
+#stage.skm{--ac:#00843d}
+
+/* biały pasek: numer + cel (bez tła), trasa, przystanek. Płaskie kolory, bez gradientów i cieni */
+#hdr{position:absolute;left:0;top:0;width:1280px;height:170px;background:#fff;color:#222}
 #num{position:absolute;left:20px;top:0;height:170px;display:flex;align-items:center;font-weight:700;font-size:136px;letter-spacing:-3px;color:#1b1b1b;white-space:nowrap;transform-origin:0 50%}
 #ar{font-size:44px;font-weight:400;align-self:flex-start;margin-top:26px;margin-left:8px;letter-spacing:0}
 #rows{position:absolute;left:310px;right:0;top:0;height:170px;overflow:hidden}
 .mq{position:absolute;left:0;right:0;overflow:hidden;white-space:nowrap}
-#mqd{top:11px;height:72px}
-#mqt{top:95px;height:66px}
+#mqd{top:6px;height:62px}
+#mqt{top:70px;height:44px}
 .mi{display:inline-block;vertical-align:top;white-space:nowrap}
-#mqd .mi{background:#e3202a;color:#fff;font-weight:700;font-size:54px;line-height:72px;padding:0 18px}
-#mqt .mi{font-size:50px;line-height:66px;color:#262626}
+#mqd .mi{color:#1b1b1b;font-weight:700;font-size:52px;line-height:62px}
+#mqt .mi{font-size:32px;line-height:44px;color:#262626}
 #mqt .mi b{font-weight:700}
 .gp{display:inline-block;width:170px}
+#stp{position:absolute;left:0;right:24px;top:116px;height:48px;overflow:hidden;white-space:nowrap;font-size:34px;line-height:48px;color:var(--ac)}
+#si{display:inline-block;transform-origin:0 50%}
+#sn{font-size:40px;font-weight:700}
 
 /* pasek zegara (postój) */
-#clk{position:absolute;left:0;top:0;width:1280px;height:170px;background:linear-gradient(90deg,#2a2ad6,#2323bd);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 36px}
+#clk{position:absolute;left:0;top:0;width:1280px;height:170px;background:var(--ac);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 36px}
 #ct{font-size:122px;font-weight:700;letter-spacing:-2px;line-height:1}
 #cw{font-size:38px;font-weight:400;vertical-align:top;margin-left:10px;position:relative;top:10px;letter-spacing:0}
 #cd{font-size:60px;font-weight:700}
 
-/* treść pod nagłówkiem */
-#body{position:absolute;left:0;top:170px;width:1280px;height:550px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
-#bl{font-size:42px;color:#9fb0cc;letter-spacing:.04em}
-#bn{font-size:112px;font-weight:700;white-space:nowrap;transform-origin:50% 50%}
-#bx{font-size:34px;color:#c9d3e6;min-height:44px}
-#bp{position:absolute;left:60px;right:60px;bottom:46px;height:10px;border-radius:5px;background:#1f2638}
-#bp i{display:block;height:100%;border-radius:5px;background:#e3202a;width:0}
+/* pod białym paskiem: reklamy (na razie napis) */
+#body{position:absolute;left:0;top:170px;width:1280px;height:550px;display:flex;align-items:center;justify-content:center;background:#0a0d16}
+#ad{font-size:170px;font-weight:700;letter-spacing:.02em;color:#fff;white-space:nowrap}
 
-/* motyw SKM (pociąg): zieleń zamiast czerwieni/fioletu */
-#stage.skm #mqd .mi{background:#00843d}
-#stage.skm #bl{color:#3fcf7a}
-#stage.skm #bn{color:#3fcf7a}
-#stage.skm #bp i{background:#00a94f}
-#stage.skm #clk{background:linear-gradient(90deg,#00843d,#006b31)}
-#stage.skm #hdr{background:linear-gradient(#f4faf6,#d3e6da)}
 body.kiosk{background:#000;cursor:none}
 body.kiosk #controls,body.kiosk header{display:none!important}
 body.kiosk .page{padding:0;max-width:none;gap:0}
@@ -75,7 +71,7 @@ body.kiosk #wrap{position:fixed;inset:0;height:auto!important;border-radius:0}
     <label><input type="checkbox" id="link" checked> Połącz z SIP</label>
     <label>Linia <input type="text" id="line" value="189" list="lines" autocomplete="off"><datalist id="lines"></datalist></label>
     <label>Wariant <select id="variant"></select></label>
-    <label>Motyw <select id="theme"><option value="auto">Auto (SKM = zielony)</option><option value="skm">SKM (zielony)</option><option value="def">Domyślny</option></select></label>
+    <label>Motyw <select id="theme"><option value="auto">Auto (SKM zielony, reszta fioletowa)</option><option value="skm">Zielony (SKM)</option><option value="def">Fioletowy (autobus)</option></select></label>
     <label>Widok <select id="view"><option value="line">Linia</option><option value="clock">Zegar (postój)</option></select></label>
     <label><input type="checkbox" id="short"> Kurs skrócony</label>
     <button id="prev" aria-label="Poprzedni krok">◀ Wstecz</button>
@@ -88,10 +84,10 @@ body.kiosk #wrap{position:fixed;inset:0;height:auto!important;border-radius:0}
     <div id="stage">
       <div id="hdr">
         <div id="num"><span id="nn"></span><span id="ar">→</span></div>
-        <div id="rows"><div class="mq" id="mqd"></div><div class="mq" id="mqt"></div></div>
+        <div id="rows"><div class="mq" id="mqd"></div><div class="mq" id="mqt"></div><div id="stp"><span id="si"><span id="sl"></span> <b id="sn"></b></span></div></div>
       </div>
       <div id="clk" hidden><div><span id="ct"></span><span id="cw"></span></div><div id="cd"></div></div>
-      <div id="body"><div id="bl"></div><div id="bn"></div><div id="bx"></div><div id="bp"><i></i></div></div>
+      <div id="body"><div id="ad">vtsf</div></div>
     </div>
   </div>
 </div>
@@ -142,6 +138,7 @@ function drawHdr(){
   marquee($("mqd"), "d|" + dest, function(){ return mi(dest); });
   // trasa: ulice (nie przystanki), cała trasa kursu; bez danych o ulicach wiersz jest pusty
   var tr = (V.streets || []).map(abbr).join("-"), mt = $("mqt");
+  if (!tr && V.stops.length > 1) tr = V.stops.map(function(x){ return x.name; }).join("-");
   if (!tr) { mt._key = null; if (mt._anim) { mt._anim.cancel(); mt._anim = null; } mt.innerHTML = ""; }
   else marquee(mt, "t|" + tr, function(){
     var s = document.createElement("span"); s.className = "mi";
@@ -151,17 +148,14 @@ function drawHdr(){
 }
 
 function drawBody(){
-  var n = V.stops.length; if (!n) { $("bl").textContent = ""; $("bn").textContent = ""; $("bx").textContent = ""; $("bp").hidden = true; return; }
-  var s = V.stops[V.idx], nz = s.typ === "2";
-  var pl = V.atStop ? "PRZYSTANEK" : "NASTĘPNY PRZYSTANEK", en = V.atStop ? "CURRENT STOP" : "NEXT STOP";
-  $("bl").textContent = (EN ? en : pl) + (nz ? (EN ? " (ON REQUEST)" : " NA ŻĄDANIE") : "");
-  var bn = $("bn"); bn.textContent = s.name; bn.style.transform = "none";
-  var w = bn.scrollWidth; if (w > 1160) bn.style.transform = "scaleX(" + Math.max(.5, 1160 / w) + ")";
-  $("bx").textContent = "";
-  $("bp").hidden = false;
-  $("bp").firstElementChild.style.width = (n > 1 ? (V.idx + (V.atStop ? 0 : -0.5)) / (n - 1) * 100 : 100) + "%";
-  if (!V.atStop && V.idx === 0) $("bp").firstElementChild.style.width = "0";
-  if (V.prog != null) $("bp").firstElementChild.style.width = (V.prog * 100) + "%";      // z SIP
+  var s = V.stops[V.idx], sl = $("sl"), sn = $("sn"), si = $("si");
+  if (!s) { sl.textContent = ""; sn.textContent = ""; return; }
+  var nz = s.typ === "2";
+  sl.textContent = V.atStop ? (EN ? "CURRENT STOP:" : "PRZYSTANEK:") : (EN ? "NEXT STOP:" : "NASTĘPNY PRZYSTANEK:");
+  sn.textContent = s.name + (nz ? (EN ? " (ON REQUEST)" : " (NA ŻĄDANIE)") : "");
+  si.style.transform = "none";
+  var w = si.offsetWidth, cw = $("stp").clientWidth;
+  if (w > cw) si.style.transform = "scaleX(" + Math.max(.5, cw / w) + ")";
 }
 
 function clock(){
@@ -257,6 +251,7 @@ function init(){
   if (P.get("short") === "1") $("short").checked = true;
   if (P.get("view") === "clock") $("view").value = "clock";
   if (P.get("line")) $("line").value = P.get("line");
+  if (P.get("ad")) $("ad").textContent = P.get("ad");
   if (P.get("theme") === "skm" || P.get("theme") === "def") $("theme").value = P.get("theme");
   fit(); clock();
   load().then(function(d){
