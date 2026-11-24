@@ -38,15 +38,16 @@ button{background:transparent;cursor:pointer}
 #rows{position:absolute;left:310px;right:0;top:0;height:170px;overflow:hidden}
 .mq{position:absolute;left:0;right:0;overflow:hidden;white-space:nowrap}
 #mqd{top:6px;height:62px}
-#mqt{top:70px;height:44px}
+#mqt{top:76px;height:80px}
 .mi{display:inline-block;vertical-align:top;white-space:nowrap}
 #mqd .mi{color:#1b1b1b;font-weight:700;font-size:52px;line-height:62px}
-#mqt .mi{font-size:32px;line-height:44px;color:#262626}
+#mqt .mi{font-size:46px;line-height:80px;color:#262626}
 #mqt .mi b{font-weight:700}
 .gp{display:inline-block;width:170px}
-#stp{position:absolute;left:0;right:24px;top:116px;height:48px;overflow:hidden;white-space:nowrap;font-size:34px;line-height:48px;color:var(--ac)}
+#stp{position:absolute;left:0;right:24px;top:76px;height:80px;overflow:hidden;white-space:nowrap;font-size:46px;line-height:80px;color:var(--ac)}
+#mqt.off,#stp.off{visibility:hidden}
 #si{display:inline-block;transform-origin:0 50%}
-#sn{font-size:40px;font-weight:700}
+#sn{font-size:54px;font-weight:700}
 
 /* pasek zegara (postój) */
 #clk{position:absolute;left:0;top:0;width:1280px;height:170px;background:var(--ac);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 36px}
@@ -173,12 +174,20 @@ function isSkm(){
   return /^S\d{1,2}$/.test(String(V.line).toUpperCase());       // SKM: S1, S2, S3…
 }
 
+// drugi wiersz: TRASA i PRZYSTANEK przełączają się co 10 s (zamiast być jeden pod drugim)
+var ROW = 0;
+function applyRow(){
+  var hasTr = !!$("mqt").firstChild, showTr = hasTr && ROW === 0;
+  $("mqt").classList.toggle("off", !showTr);
+  $("stp").classList.toggle("off", showTr);
+}
+
 function render(){
   $("stage").classList.toggle("skm", isSkm());
   var clockView = $("view").value === "clock" || !V.stops.length;
   $("hdr").hidden = clockView; $("clk").hidden = !clockView;
   if (!clockView) drawHdr();
-  drawBody(); clock();
+  drawBody(); clock(); applyRow();
 }
 
 function onVariant(){
@@ -280,6 +289,7 @@ function init(){
   document.addEventListener("fullscreenchange", function(){ setTimeout(fit, 50); });
   window.addEventListener("resize", fit);
   setInterval(clock, 10000);
+  setInterval(function(){ ROW = 1 - ROW; applyRow(); }, 10000);
   if (ENON) setInterval(function(){ EN = !EN; drawBody(); }, 5000);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ $("mqd")._key = $("mqt")._key = null; render(); });
 }
