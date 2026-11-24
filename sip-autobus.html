@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap">
 <style>
+@font-face{font-family:"Open Sans";src:url("Fonts/pl/OpenSans.ttf") format("truetype");font-weight:300 800;font-style:normal;font-display:swap}
+@font-face{font-family:"Open Sans";src:url("Fonts/pl/OpenSans-Italic.ttf") format("truetype");font-weight:300 800;font-style:italic;font-display:swap}
 @font-face{font-family:"Frutiger";src:url("Fonts/pl/Frutiger_Light_Italic.ttf") format("truetype");font-weight:300;font-style:italic;font-display:swap}
 @font-face{font-family:"Frutiger";src:url("Fonts/pl/Frutiger_Roman.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:"Frutiger";src:url("Fonts/pl/Frutiger_Roman_Italic.ttf") format("truetype");font-weight:400;font-style:italic;font-display:swap}
@@ -33,7 +35,7 @@ h1{margin:0;font-size:20px;font-weight:700}
 .sub{color:var(--muted);font-size:13px}
 #wrap{position:relative;width:100%;background:#000;overflow:hidden;border-radius:4px}
 #wrap:fullscreen{border-radius:0}
-#stage{position:absolute;left:0;top:0;width:1920px;height:540px;transform-origin:0 0;background:#fff;overflow:hidden;font-family:"Frutiger","Frutiger LT Std","Frutiger LT Pro","Frutiger Next LT","Frutiger Next","Open Sans","Noto Sans","Segoe UI",Arial,sans-serif;color:#000}
+#stage{position:absolute;left:0;top:0;width:1920px;height:540px;transform-origin:0 0;background:#fff;overflow:hidden;font-family:"Open Sans","Noto Sans","Segoe UI",Arial,sans-serif;color:#000}
 #stage img{position:absolute;display:block;max-width:none}
 #stage .t{position:absolute;white-space:nowrap}
 #bg{left:0;top:0;width:1920px;height:540px}
@@ -49,7 +51,7 @@ h1{margin:0;font-size:20px;font-weight:700}
 #diag{position:absolute;left:0;top:0;width:1920px;height:540px;pointer-events:none}
 #diag .ln{position:absolute;height:6px;border-radius:3px}
 #diag .dot{position:absolute;border-radius:50%;box-sizing:border-box}
-#diag .nm{position:absolute;white-space:nowrap;font-family:"Open Sans","Noto Sans","Frutiger",Arial,sans-serif;font-weight:700;color:#1a1a1a;transform-origin:0 100%}
+#diag .nm{position:absolute;white-space:nowrap;font-family:"Open Sans","Noto Sans",Arial,sans-serif;font-weight:700;color:#1a1a1a;transform-origin:0 100%}
 #diag .nm.past{color:#a6a6a6}
 #diag .nm.end{font-weight:700;color:#1d1d1d}
 #diag .nm.cur{color:var(--lc,#88007c)!important;font-weight:700!important}
