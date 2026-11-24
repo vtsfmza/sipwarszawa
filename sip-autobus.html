@@ -49,11 +49,11 @@ h1{margin:0;font-size:20px;font-weight:700}
 #diag{position:absolute;left:0;top:0;width:1920px;height:540px;pointer-events:none}
 #diag .ln{position:absolute;height:6px;border-radius:3px}
 #diag .dot{position:absolute;border-radius:50%;box-sizing:border-box}
-#diag .nm{position:absolute;white-space:nowrap;font-weight:400;color:#1a1a1a;transform-origin:0 100%}
+#diag .nm{position:absolute;white-space:nowrap;font-family:"Open Sans","Noto Sans","Frutiger",Arial,sans-serif;font-weight:700;color:#1a1a1a;transform-origin:0 100%}
 #diag .nm.past{color:#a6a6a6}
-#diag .nm.end{font-weight:600;color:#1d1d1d}
+#diag .nm.end{font-weight:700;color:#1d1d1d}
 #diag .nm.cur{color:var(--lc,#88007c)!important;font-weight:700!important}
-#diag .bar{position:absolute;background:#d3232f}
+#diag .bar{position:absolute;background:#a13032}
 #diag .gap{position:absolute;width:2px;background:#fff}
 #diag .nm .zz{font-weight:700;flex:none}
 #diag .nm img{position:static;display:inline-block;height:1.25em;vertical-align:middle;margin-left:5px}
@@ -151,7 +151,7 @@ button{padding:4px 10px}
 #diag .cb{border-radius:999px}
 #diag .cb svg{display:block}
 #diag .gw{position:absolute;transform-origin:0 100%;white-space:nowrap}
-#diag .nm .gz{display:inline-block;margin-left:8px;background:#d3232f;color:#fff;border-radius:3px;padding:0 8px;line-height:inherit;white-space:nowrap}
+#diag .nm .gz{display:inline-block;margin-left:8px;background:#a13032;color:#fff;border-radius:3px;padding:0 8px;line-height:inherit;white-space:nowrap}
 #hdr .trw{display:flex;align-items:center;height:62px;overflow:hidden;margin-left:12px;align-self:center;flex:none}
 #hdr .tri{display:flex;align-items:center;width:100%;line-height:1.12;font-size:19px;color:#444;font-weight:400;white-space:normal;max-width:100%}
 #hdr .tg{display:flex;align-items:center;flex:1 1 auto;min-width:0}
@@ -160,7 +160,7 @@ button{padding:4px 10px}
 #hdr .tg .tl{min-width:0}
 #hdr .ti2{position:static;display:inline-block;width:1.25em;height:1.25em;vertical-align:-.25em;margin:0 .3em 0 .7em}
 #hdr .tl{white-space:normal}
-#hdr .hz{display:inline-block;vertical-align:middle;margin-left:18px;background:#d3232f;color:#fff;font-size:46px;font-weight:700;line-height:1.2;padding:0 14px;border-radius:4px}
+#hdr .hz{display:inline-block;vertical-align:middle;margin-left:18px;background:#a13032;color:#fff;font-size:46px;font-weight:700;line-height:1.2;padding:0 14px;border-radius:4px}
 #hdr .nmw{position:relative;display:inline-block;overflow:hidden;height:62px;align-self:center}
 #hdr .nmp{position:absolute;left:0;top:0;white-space:nowrap;font-size:46px;font-weight:700;line-height:62px}
 #diag .nsw{position:relative;display:inline-block;overflow:hidden;vertical-align:top}
@@ -318,14 +318,14 @@ var API = "https://dane.um.warszawa.pl/api/action/";
 // ---------- Typy linii ----------
 var TYPES = {
   zwykla:{ label:"Zwykła", bg:"img/zwykla.png", num:"#262626", dot:"#88007c" },
-  przyspieszona:{ label:"Przyspieszona", bg:IMG.przyspieszona, num:"#d3232f", dot:"#88007c" },
+  przyspieszona:{ label:"Przyspieszona", bg:IMG.przyspieszona, num:"#a13032", dot:"#88007c" },
   nocna:{ label:"Nocna", bg:IMG.nocna, num:"#ffffff", dot:"#88007c" },
   strefowa:{ label:"Strefowa", bg:IMG.strefowa, num:"#1f8f1f", dot:"#88007c" },
   strefowa_okresowa:{ label:"Strefowa okresowa", bg:IMG.strefowa_okresowa, num:"#1f8f1f", dot:"#88007c" },
   okresowa:{ label:"Okresowa", bg:IMG.okresowa, num:"#262626", dot:"#88007c" },
-  okresowa_przyspieszona:{ label:"Okresowa przyspieszona", bg:IMG.okresowa_przyspieszona, num:"#d3232f", dot:"#88007c" },
+  okresowa_przyspieszona:{ label:"Okresowa przyspieszona", bg:IMG.okresowa_przyspieszona, num:"#a13032", dot:"#88007c" },
   specjalna:{ label:"Specjalna", bg:IMG.specjalna, num:"#000000", dot:"#88007c" },
-  dwucyfrowa:{ label:"Dwucyfrowa (czerwona)", bg:"img/zwykla_czerwona.png", num:"#262626", dot:"#d3232f" }
+  dwucyfrowa:{ label:"Dwucyfrowa (czerwona)", bg:"img/zwykla_czerwona.png", num:"#262626", dot:"#a13032" }
 };
 // Ustalenie typu po numerze to przybliżenie; zawsze można wskazać typ ręcznie.
 function detectType(line){
@@ -598,9 +598,10 @@ function fit(el, maxW, base){
   }
 }
 function arrowSvg(nz, c){
-  return '<svg width="76" height="30" viewBox="0 0 76 30" style="margin-left:16px"><circle cx="14" cy="15" r="10" fill="#fff" stroke="'+c+'" stroke-width="3.5"/>' +
-    (nz ? '' : '<circle cx="14" cy="15" r="5" fill="'+c+'"/>') +
-    '<path d="M26 15H68M58 6l10 9-10 9" fill="none" stroke="'+c+'" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  c = "#941072";                                                    // kolor strzałki jak na wzorze
+  return '<svg width="104" height="42" viewBox="0 0 104 42" style="margin-left:16px"><circle cx="21" cy="21" r="18" fill="#fff" stroke="'+c+'" stroke-width="4"/>' +
+    (nz ? '' : '<circle cx="21" cy="21" r="11" fill="'+c+'"/>') +
+    '<path d="M39 21H84" fill="none" stroke="'+c+'" stroke-width="7"/><path d="M80 7L103 21 80 35Z" fill="'+c+'"/></svg>';
 }
 function transHtml(tr){                                              // wszystkie przesiadki w bloku: zawija się do kilku wierszy, a czcionka maleje tak, by zmieścić wszystkie linie
   return '<span class="trw"><span class="tri">' + tr.map(function(g){ return '<span class="tg" style="flex-grow:' + g.lines.split(" ").length + '"><img class="ti2" src="img/' + g.type + '.png" alt=""><span class="tl">' + g.lines + '</span></span>'; }).join("") + '</span></span>';
@@ -941,7 +942,7 @@ function drawDiag(v, T){
     var tn = document.createElement("span"); tn.className = "tn"; tn.textContent = s.name; nm.appendChild(tn);
     if (ZI && ZI.bd[i]) { var gt = document.createElement("span"); gt.className = "gz"; gt.textContent = "granica strefy biletowej"; tn.appendChild(gt); }   // wewnątrz nazwy: jedzie z nią, także przy przewijaniu
     if (s.wc) { var im = document.createElement("img"); im.src = "img/wheelchair_" + s.wc + ".png"; im.alt = ""; nm.appendChild(im); }
-    if (t > 0.3 && !passed) nm.style.fontWeight = 600;
+    if (t > 0.3 && !passed) nm.style.fontWeight = 700;
     var room = Math.min((1905 - x) / Math.cos(rad), (Y - 11 - 105) / Math.sin(rad)), maxW = Math.max(60, Math.min(300, room)), tf = "rotate(-" + ang + "deg)";
     if (nm.scrollWidth > maxW) {                                    // tylko nazwa, która wychodzi poza miejsce: rozmiar bez zmian (nic nie skracamy), nazwa przesuwa się od prawej do lewej
       var tw = tn.offsetWidth, avail = Math.max(60, maxW - (nm.scrollWidth - tw));
