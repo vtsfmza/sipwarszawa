@@ -55,6 +55,13 @@ button{background:transparent;cursor:pointer}
 #bp{position:absolute;left:60px;right:60px;bottom:46px;height:10px;border-radius:5px;background:#1f2638}
 #bp i{display:block;height:100%;border-radius:5px;background:#e3202a;width:0}
 
+/* motyw SKM (pociąg): zieleń zamiast czerwieni/fioletu */
+#stage.skm #mqd .mi{background:#00843d}
+#stage.skm #bl{color:#3fcf7a}
+#stage.skm #bn{color:#3fcf7a}
+#stage.skm #bp i{background:#00a94f}
+#stage.skm #clk{background:linear-gradient(90deg,#00843d,#006b31)}
+#stage.skm #hdr{background:linear-gradient(#f4faf6,#d3e6da)}
 body.kiosk{background:#000;cursor:none}
 body.kiosk #controls,body.kiosk header{display:none!important}
 body.kiosk .page{padding:0;max-width:none;gap:0}
@@ -68,6 +75,7 @@ body.kiosk #wrap{position:fixed;inset:0;height:auto!important;border-radius:0}
     <label><input type="checkbox" id="link" checked> Połącz z SIP</label>
     <label>Linia <input type="text" id="line" value="189" list="lines" autocomplete="off"><datalist id="lines"></datalist></label>
     <label>Wariant <select id="variant"></select></label>
+    <label>Motyw <select id="theme"><option value="auto">Auto (SKM = zielony)</option><option value="skm">SKM (zielony)</option><option value="def">Domyślny</option></select></label>
     <label>Widok <select id="view"><option value="line">Linia</option><option value="clock">Zegar (postój)</option></select></label>
     <label><input type="checkbox" id="short"> Kurs skrócony</label>
     <button id="prev" aria-label="Poprzedni krok">◀ Wstecz</button>
@@ -95,8 +103,9 @@ var $ = function(id){ return document.getElementById(id); };
 var P = new URLSearchParams(location.search);
 
 // Dane demonstracyjne (gdy nie działa serve.py z /gtfs/routes.json)
-var DEMO = { stops:{ a:["Plac Zawiszy"], b:["Dworzec Zachodni"], c:["Rondo Daszyńskiego"], d:["Rondo ONZ"], e:["Świętokrzyska"], f:["Centrum"], g:["Metro Politechnika"], h:["Plac Konstytucji"], i:["Rondo Waszyngtona"] },
-  routes:{ "123":[{code:"A1",dir:0,headsign:"Rondo Waszyngtona",streets:["Aleje Jerozolimskie","Plac Zawiszy","Prosta","Jana Pawła II"],stops:[["a","1"],["b","2"],["c","1"],["d","1"],["e","1"],["f","2"],["g","1"],["h","1"],["i","1"]]}] } };
+var DEMO = { stops:{ a:["Plac Zawiszy"], b:["Dworzec Zachodni"], c:["Rondo Daszyńskiego"], d:["Rondo ONZ"], e:["Świętokrzyska"], f:["Centrum"], g:["Metro Politechnika"], h:["Plac Konstytucji"], i:["Rondo Waszyngtona"],
+  s1:["Warszawa Zachodnia"], s2:["Warszawa Centralna"], s3:["Warszawa Śródmieście"], s4:["Warszawa Powiśle"], s5:["Warszawa Stadion"], s6:["Warszawa Wschodnia"], s7:["Falenica"], s8:["Otwock"] },
+  routes:{ "S1":[{code:"S1A",dir:0,headsign:"Otwock",streets:[],stops:[["s1","1"],["s2","1"],["s3","1"],["s4","1"],["s5","1"],["s6","1"],["s7","1"],["s8","1"]]}], "123":[{code:"A1",dir:0,headsign:"Rondo Waszyngtona",streets:["Aleje Jerozolimskie","Plac Zawiszy","Prosta","Jana Pawła II"],stops:[["a","1"],["b","2"],["c","1"],["d","1"],["e","1"],["f","2"],["g","1"],["h","1"],["i","1"]]}] } };
 
 var D = null, V = { line:"", stops:[], dest:"", idx:0, atStop:true, streets:[], prog:null }, EN = false, timer = null, SIPMODE = false;
 var ENON = P.get("en") !== "0";
@@ -162,7 +171,16 @@ function clock(){
   $("cd").textContent = d.toLocaleDateString("pl-PL", { day:"numeric", month:"long", year:"numeric" });
 }
 
+function isSkm(){
+  var t = $("theme").value;
+  if (t === "skm") return true;
+  if (t === "def") return false;
+  if (SIPMODE) { var s = sipOn(); if (s && s.type) return s.type === "skm"; }
+  return /^S\d{1,2}$/.test(String(V.line).toUpperCase());       // SKM: S1, S2, S3…
+}
+
 function render(){
+  $("stage").classList.toggle("skm", isSkm());
   var clockView = $("view").value === "clock" || !V.stops.length;
   $("hdr").hidden = clockView; $("clk").hidden = !clockView;
   if (!clockView) drawHdr();
@@ -187,7 +205,7 @@ function onLine(){
     o.textContent = v.code + ": " + (st ? st[0] : "?") + " → " + (en ? en[0] : "?") + " (" + v.stops.length + " przyst.)"; sel.appendChild(o);
   });
   if (P.get("var")) { sel.value = P.get("var"); P.delete("var"); }
-  setStatus(vs.length ? "" : "Nie ma linii " + V.line + " w danych" + (D === DEMO ? " demonstracyjnych (dostępna: 123). Z serwerem serve.py są wszystkie linie." : "."));
+  setStatus(vs.length ? "" : "Nie ma linii " + V.line + " w danych" + (D === DEMO ? " demonstracyjnych (dostępne: 123, S1 – przykład). Z serwerem serve.py są wszystkie linie." : "."));
   onVariant();
 }
 
@@ -239,6 +257,7 @@ function init(){
   if (P.get("short") === "1") $("short").checked = true;
   if (P.get("view") === "clock") $("view").value = "clock";
   if (P.get("line")) $("line").value = P.get("line");
+  if (P.get("theme") === "skm" || P.get("theme") === "def") $("theme").value = P.get("theme");
   fit(); clock();
   load().then(function(d){
     D = d;
@@ -253,6 +272,7 @@ function init(){
   $("line").addEventListener("change", onLine);
   $("variant").addEventListener("change", onVariant);
   $("view").addEventListener("change", render);
+  $("theme").addEventListener("change", render);
   $("short").addEventListener("change", render);
   $("prev").addEventListener("click", function(){ step(-1); sched(); });
   $("next").addEventListener("click", function(){ step(1); sched(); });

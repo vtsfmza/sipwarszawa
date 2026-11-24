@@ -327,12 +327,14 @@ var TYPES = {
   okresowa:{ label:"Okresowa", bg:IMG.okresowa, num:"#262626", dot:"#88007c" },
   okresowa_przyspieszona:{ label:"Okresowa przyspieszona", bg:IMG.okresowa_przyspieszona, num:"#cc0000", dot:"#88007c" },
   specjalna:{ label:"Specjalna", bg:IMG.specjalna, num:"#000000", dot:"#88007c" },
-  dwucyfrowa:{ label:"Dwucyfrowa (czerwona)", bg:"img/zwykla_czerwona.png", num:"#262626", dot:"#a13032" }
+  dwucyfrowa:{ label:"Dwucyfrowa (czerwona)", bg:"img/zwykla_czerwona.png", num:"#262626", dot:"#a13032" },
+  skm:{ label:"SKM (pociąg, zielona)", bg:"img/skm.png", num:"#262626", dot:"#00843d" }
 };
 // Ustalenie typu po numerze to przybliżenie; zawsze można wskazać typ ręcznie.
 function detectType(line){
   var L = String(line).toUpperCase();
   if (/^N\d/.test(L)) return "nocna";
+  if (/^S\d{1,2}$/.test(L)) return "skm";                         // SKM: S1, S2, S3… (pociąg, zielona)
   if (/^5\d\d$/.test(L)) return "przyspieszona";
   if (/^[789]\d\d$/.test(L)) return "strefowa";
   if (/^[A-Z]/.test(L)) return "specjalna";
