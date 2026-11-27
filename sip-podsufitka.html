@@ -43,6 +43,7 @@ button{background:transparent;cursor:pointer}
 #mqd .mi{color:#1b1b1b;font-weight:700;font-size:52px;line-height:62px}
 #mqt .mi{font-size:46px;line-height:80px;color:#262626}
 #mqt .mi b{font-weight:700}
+#mqt .mi{font-weight:400}
 .gp{display:inline-block;width:170px}
 #stp{position:absolute;left:0;right:24px;top:76px;height:80px;overflow:hidden;white-space:nowrap;font-size:46px;line-height:80px;color:var(--ac)}
 #mqt.off,#stp.off{visibility:hidden}
@@ -52,7 +53,7 @@ button{background:transparent;cursor:pointer}
 /* pasek zegara (postój) */
 #clk{position:absolute;left:0;top:0;width:1280px;height:170px;background:#1d24c8;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 36px}
 #ct{font-size:122px;font-weight:700;letter-spacing:-2px;line-height:1}
-#cw{font-size:38px;font-weight:400;vertical-align:top;margin-left:10px;position:relative;top:10px;letter-spacing:0}
+#cw{font-size:62px;font-weight:400;vertical-align:top;margin-left:12px;position:relative;top:6px;letter-spacing:0}
 #cd{font-size:60px;font-weight:700;align-self:flex-end;margin-bottom:12px}
 #stage.skm #clk{background:#00843d}
 
@@ -144,8 +145,8 @@ function drawHdr(){
   if (!tr) { mt._key = null; if (mt._anim) { mt._anim.cancel(); mt._anim = null; } mt.innerHTML = ""; }
   else marquee(mt, "t|" + tr, function(){
     var s = document.createElement("span"); s.className = "mi";
-    s.appendChild(document.createTextNode("TRASA: "));
-    var b = document.createElement("b"); b.textContent = tr; s.appendChild(b); return s;
+    var b = document.createElement("b"); b.textContent = "Trasa: "; s.appendChild(b);
+    s.appendChild(document.createTextNode(tr)); return s;
   });
 }
 

@@ -603,7 +603,7 @@ function fit(el, maxW, base){
   }
 }
 function arrowSvg(nz, c){
-  c = "#941072";                                                    // kolor strzałki jak na wzorze
+  c = (c === "#00843d" || c === "#a13032") ? c : "#941072";         // SKM zielona, tramwaj (linie 1-2-cyfrowe) czerwona, reszta fioletowa jak na wzorze
   return '<svg width="104" height="42" viewBox="0 0 104 42" style="margin-left:16px"><circle cx="21" cy="21" r="18" fill="#fff" stroke="'+c+'" stroke-width="4"/>' +
     (nz ? '' : '<circle cx="21" cy="21" r="11" fill="'+c+'"/>') +
     '<path d="M39 21H84" fill="none" stroke="'+c+'" stroke-width="7"/><path d="M80 7L103 21 80 35Z" fill="'+c+'"/></svg>';
@@ -711,9 +711,13 @@ var VOICE = { cat:null, idx:null, queue:[], audio:null, lastKey:"", loading:fals
 function nk(x){ return String(x).toLowerCase().replace(/\(ż\)/g, "").replace(/[\s.\-–,"'„”“«»]+/g, ""); }     // cudzysłowy w kluczach katalogu (rondo "radosława") nie mogą blokować dopasowania
 function vUrl(val){ var m = /^\{Q(\d)\}(.+)$/.exec(val); return m ? VOICE.cat.base[m[1]] + encodeURIComponent(m[2]) : null; }
 function vSnd(label){ var v = VOICE.cat.sounds[label]; return v ? vUrl(v) : null; }
-function vStop(name){
+function vStop(name, skm){
   if (!VOICE.idx) { VOICE.idx = {}; Object.keys(VOICE.cat.stops).forEach(function(k){ VOICE.idx[nk(k)] = VOICE.cat.stops[k]; }); }
   var base = String(name), plain = base.replace(/\s*\(.*?\)\s*/g, " ").trim(), tries = [], al = VOICE.alias || {};
+  if (skm) {                                                           // SKM: w banku nazwy zaczynają się od „Warszawa” i kończą na „(SKM)”, np. „Warszawa Gdańska (SKM)”
+    var core = plain.replace(/^warszawa\s+/i, "");
+    tries.push("Warszawa " + core + " (SKM)", "Warszawa " + core + " (KM)", "Warszawa " + core, plain + " (SKM)", core + " (SKM)");
+  }
   [base, plain].forEach(function(x){ var a = al[nk(x)]; if (a) tries.push(a); });
   tries.push(base, plain);
   var w = plain.split(/\s+/);                                          // np. "Ząbki Maczka" -> "Maczka" (nagrania często bez nazwy miejscowości)
@@ -757,7 +761,8 @@ function announce(v){
   if (!VOICE.cat || v.mode !== "run" || !v.stops.length) return;
   var s = v.stops[v.idx], last = v.idx === v.stops.length - 1, nz = s.typ === "2", q = [], miss = [];
   function add(u){ if (u) q.push(u); }
-  function name(st){ var u = vStop(st.full || st.name); if (u) q.push(u); else miss.push(st.name); }
+  var skm = v.type === "skm" || /^S\d{1,2}$/i.test(String(v.line));
+  function name(st){ var u = vStop(st.full || st.name, skm); if (u) q.push(u); else miss.push(st.name); }
   if (v.atStop) {
     if (VOICE.gong) add(vSnd("Gong BUSE - Przystanek"));
     if (v.idx === 0) {
